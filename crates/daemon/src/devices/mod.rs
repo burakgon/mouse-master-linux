@@ -189,6 +189,8 @@ pub struct Shared {
     pub registry: Registry,
     pub events: broadcast::Sender<DaemonEvent>,
     pub active_app: watch::Receiver<ActiveApp>,
+    /// False while another user's session has the seat.
+    pub present: watch::Receiver<bool>,
     /// A client asked for live motion events (gesture preview).
     pub monitoring: AtomicBool,
 }

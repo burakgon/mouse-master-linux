@@ -77,6 +77,8 @@ struct Actor {
     skip_first_motion: bool,
     /// Controls with analytics key events turned on (live press highlighting).
     analytics: Vec<u16>,
+    /// Another user has the seat: the device is left alone.
+    paused: bool,
     battery_warned: bool,
     app: ActiveApp,
 }
@@ -107,6 +109,7 @@ impl Actor {
             shift_saved_dpi: None,
             skip_first_motion: false,
             analytics: Vec::new(),
+            paused: false,
             battery_warned: false,
             app,
         }
@@ -171,6 +174,8 @@ impl Actor {
 
         let mut app_rx = self.shared.active_app.clone();
         app_rx.mark_unchanged();
+        let mut present_rx = self.shared.present.clone();
+        present_rx.mark_unchanged();
         let mut battery_timer = tokio::time::interval(Duration::from_secs(15 * 60));
         battery_timer.tick().await;
         loop {
@@ -195,6 +200,12 @@ impl Actor {
                     if changed.is_ok() {
                         let app = app_rx.borrow_and_update().clone();
                         self.on_app(app).await;
+                    }
+                }
+                changed = present_rx.changed() => {
+                    if changed.is_ok() {
+                        let present = *present_rx.borrow_and_update();
+                        self.on_presence(present).await;
                     }
                 }
                 _ = battery_timer.tick() => self.refresh_battery().await,
@@ -427,7 +438,10 @@ impl Actor {
             })
         );
 
-        self.apply_configuration(&config).await;
+        self.paused = !*self.shared.present.borrow();
+        if !self.paused {
+            self.apply_configuration(&config).await;
+        }
         self.check_battery_warning().await;
         self.analytics.clear();
         if self.shared.monitoring() {
@@ -733,6 +747,9 @@ impl Actor {
     }
 
     async fn apply_bindings(&mut self) {
+        if self.paused {
+            return;
+        }
         self.bindings_dirty = false;
         let Some(dev) = self.dev.clone() else { return };
         let controls = self.controls.clone();
@@ -798,6 +815,35 @@ impl Actor {
         self.thumb = divert.then(|| ThumbwheelTracker::new(binding, &info).inverted(invert));
     }
 
+    /// Our user left or came back to the seat (fast user switching).
+    async fn on_presence(&mut self, present: bool) {
+        if present == !self.paused {
+            return;
+        }
+        if !present {
+            info!("{}: handing the device back while another user is active", self.label());
+            self.release_everything();
+            self.restore().await;
+            self.applied.clear();
+            self.paused = true;
+        } else {
+            self.paused = false;
+            if let Some(dev) = self.dev.clone() {
+                // Somebody else may have changed the device meanwhile.
+                self.applied = Self::read_diversions(&dev, &self.controls).await;
+                if let Ok(st) = thumbwheel::status(&dev).await {
+                    self.thumb_applied = Some((st.diverted, st.inverted));
+                }
+            }
+            let config = self.shared.config.device(&self.id());
+            self.apply_configuration(&config).await;
+            if self.shared.monitoring() {
+                self.update_analytics(true).await;
+            }
+        }
+        self.publish();
+    }
+
     async fn on_app(&mut self, app: ActiveApp) {
         self.app = app;
         if self.dev.is_some() && self.snap.as_ref().is_some_and(|s| s.online) {
@@ -808,6 +854,9 @@ impl Actor {
     // ---------------------------------------------------------------- events
 
     async fn on_report(&mut self, report: Report) {
+        if self.paused {
+            return;
+        }
         let Some(dev) = &self.dev else { return };
         if !report.is_feature_event() {
             return;

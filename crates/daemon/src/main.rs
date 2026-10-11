@@ -9,6 +9,7 @@ mod gestures;
 mod hyprland;
 mod input;
 mod notify;
+mod session;
 mod thumbwheel;
 mod window;
 
@@ -99,6 +100,7 @@ async fn run(args: Args) -> Result<()> {
     let conn = zbus::Connection::session().await.context("connecting to the session bus")?;
     let (desktop_tx, desktop_rx) = watch::channel(env::detect(&conn).await);
     let (app_tx, app_rx) = watch::channel(ActiveApp::default());
+    let (present_tx, present_rx) = watch::channel(true);
     let (events_tx, _) = broadcast::channel(512);
 
     // In demo mode nothing is sent to the desktop.
@@ -112,6 +114,7 @@ async fn run(args: Args) -> Result<()> {
         registry: Default::default(),
         events: events_tx.clone(),
         active_app: app_rx.clone(),
+        present: present_rx,
         monitoring: AtomicBool::new(false),
     });
 
@@ -143,6 +146,9 @@ async fn run(args: Args) -> Result<()> {
         });
     }
     tokio::spawn(window::run(conn.clone(), desktop_tx, app_tx));
+    if !args.demo {
+        tokio::spawn(session::run(present_tx));
+    }
     let mut _simulations = Vec::new();
     if args.demo {
         use hidpp::sim::{DeviceSpec, Topology};

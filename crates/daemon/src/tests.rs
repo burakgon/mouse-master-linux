@@ -31,6 +31,7 @@ struct Harness {
     shared: Arc<Shared>,
     input: Arc<RecordingInput>,
     app: watch::Sender<ActiveApp>,
+    present: watch::Sender<bool>,
     events: broadcast::Receiver<DaemonEvent>,
     _dir: tempfile::TempDir,
 }
@@ -44,6 +45,7 @@ impl Harness {
         let executor = Executor::new(Some(input.clone() as SharedInput), None, desktop_rx.clone());
         let notifier = Notifier::new(None, desktop_rx);
         let (app, app_rx) = watch::channel(ActiveApp::default());
+        let (present, present_rx) = watch::channel(true);
         let (events_tx, events) = broadcast::channel(512);
         let shared = Arc::new(Shared {
             config,
@@ -52,9 +54,10 @@ impl Harness {
             registry: Default::default(),
             events: events_tx,
             active_app: app_rx,
+            present: present_rx,
             monitoring: AtomicBool::new(false),
         });
-        Harness { shared, input, app, events, _dir: dir }
+        Harness { shared, input, app, present, events, _dir: dir }
     }
 
     fn sim(&self, topology: Topology) -> SimHandle {
@@ -461,6 +464,38 @@ async fn presses_of_native_controls_are_reported_while_monitoring() {
     h.shared.registry.mailbox(&dev.id).unwrap().send(DeviceMsg::Monitor(false)).unwrap();
     h.settle().await;
     assert_eq!(sim.snapshot(DIRECT).await.unwrap().reporting.get(&BACK), Some(&0x000));
+}
+
+#[tokio::test]
+async fn devices_are_released_while_another_user_is_active() {
+    let h = Harness::new();
+    let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
+    let dev = h.device("MX Master 3S").await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-binding", "control": "back", "action": { "type": "keys", "keys": ["KEY_F1"] } }),
+    )
+    .await;
+    assert_eq!(sim.snapshot(DIRECT).await.unwrap().reporting.get(&BACK), Some(&0x01));
+
+    // Another user switches in: everything goes back to native and presses do nothing.
+    h.present.send_replace(false);
+    h.settle().await;
+    let state = sim.snapshot(DIRECT).await.unwrap();
+    assert!(state.reporting.values().all(|f| *f == 0), "{:?}", state.reporting);
+    sim.press(DIRECT, &[GESTURE]);
+    sim.release_all(DIRECT);
+    assert!(h.input().await.is_empty());
+
+    // Back at the seat: the configuration is applied again.
+    h.present.send_replace(true);
+    h.settle().await;
+    let state = sim.snapshot(DIRECT).await.unwrap();
+    assert_eq!(state.reporting.get(&BACK), Some(&0x01));
+    assert_eq!(state.reporting.get(&GESTURE), Some(&0x11));
+    sim.press(DIRECT, &[BACK]);
+    sim.release_all(DIRECT);
+    assert_eq!(h.input().await, tap(&[K::KEY_F1]));
 }
 
 #[tokio::test]
