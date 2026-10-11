@@ -211,8 +211,10 @@ impl Shared {
         self.monitoring.load(Ordering::Relaxed)
     }
 
+    /// Whether actions can send input. Without an input sink (demo mode)
+    /// actions are only logged, which counts as available.
     pub fn input_available(&self) -> bool {
-        self.executor.input().is_some_and(|i| i.available())
+        self.executor.input().is_none_or(|i| i.available())
     }
 
     /// Sends a command to a device and waits for the reply.

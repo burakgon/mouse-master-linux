@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use hidpp::controls::{self, Role};
 use hidpp::features::{
@@ -73,6 +73,8 @@ struct Actor {
     held: HashMap<u16, Action>,
     gesture: Option<(u16, GestureTracker)>,
     thumb: Option<ThumbwheelTracker>,
+    /// The thumb wheel is shown as pressed in the app until then.
+    thumb_lit_until: Option<Instant>,
     shift_saved_dpi: Option<u16>,
     skip_first_motion: bool,
     /// Controls with analytics key events turned on (live press highlighting).
@@ -106,6 +108,7 @@ impl Actor {
             held: HashMap::new(),
             gesture: None,
             thumb: None,
+            thumb_lit_until: None,
             shift_saved_dpi: None,
             skip_first_motion: false,
             analytics: Vec::new(),
@@ -179,6 +182,7 @@ impl Actor {
         let mut battery_timer = tokio::time::interval(Duration::from_secs(15 * 60));
         battery_timer.tick().await;
         loop {
+            let lit_until = self.thumb_lit_until;
             tokio::select! {
                 msg = rx.recv() => match msg {
                     None | Some(DeviceMsg::Shutdown) => break,
@@ -188,7 +192,13 @@ impl Actor {
                         let _ = ack.send(());
                         break;
                     }
-                    Some(DeviceMsg::Monitor(on)) => self.update_analytics(on).await,
+                    Some(DeviceMsg::Monitor(on)) => {
+                        self.update_analytics(on).await;
+                        if !self.paused {
+                            // The thumb wheel reports through us while the app watches.
+                            self.apply_thumbwheel().await;
+                        }
+                    }
                     Some(DeviceMsg::Resync) => {
                         self.resync().await;
                         self.publish();
@@ -213,6 +223,9 @@ impl Actor {
                     }
                 }
                 _ = battery_timer.tick() => self.refresh_battery().await,
+                _ = tokio::time::sleep_until(lit_until.unwrap_or_else(Instant::now).into()), if lit_until.is_some() => {
+                    self.light_thumbwheel(false);
+                }
             }
         }
         self.release_everything();
@@ -792,10 +805,21 @@ impl Actor {
     fn effective_thumbwheel(&self) -> ThumbwheelBinding {
         let binding = self.bindings.thumbwheel.clone().unwrap_or_default();
         let tap = self.bindings.thumbwheel_tap.as_ref().is_some_and(|a| a.needs_divert());
+        // While the app watches, the wheel is diverted so it can light up.
+        let watched = self.shared.monitoring() && self.shared.input_available();
         match binding {
-            // Diverted only for taps: keep scrolling natively in software.
-            ThumbwheelBinding::Default if tap => ThumbwheelBinding::Scroll { speed: 1.0 },
+            // Diverted only for taps or the app: keep scrolling at native speed in software.
+            ThumbwheelBinding::Default if tap || watched => ThumbwheelBinding::Scroll { speed: 1.0 },
             other => other,
+        }
+    }
+
+    /// Shows the thumb wheel as pressed in the app while it turns.
+    fn light_thumbwheel(&mut self, on: bool) {
+        let was = self.thumb_lit_until.is_some();
+        self.thumb_lit_until = on.then(|| Instant::now() + Duration::from_millis(350));
+        if was != on {
+            self.shared.emit(DaemonEvent::Button { device: self.id(), control: "thumbwheel".into(), pressed: on });
         }
     }
 
@@ -1055,6 +1079,13 @@ impl Actor {
     }
 
     async fn on_thumbwheel(&mut self, ev: thumbwheel::Event) {
+        if self.shared.monitoring() {
+            if ev.rotation != 0 {
+                self.light_thumbwheel(true);
+            } else if ev.status == thumbwheel::RotationStatus::Stop {
+                self.light_thumbwheel(false);
+            }
+        }
         let Some(tracker) = self.thumb.as_mut() else { return };
         let outputs = tracker.event(&ev);
         let binding = tracker.binding().clone();

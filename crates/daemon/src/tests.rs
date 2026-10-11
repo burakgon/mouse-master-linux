@@ -553,3 +553,45 @@ async fn resync_undoes_changes_made_by_other_programs() {
     h.settle().await;
     assert!(diverted(&sim.snapshot(DIRECT).await.unwrap()));
 }
+
+#[tokio::test]
+async fn thumbwheel_lights_up_while_monitoring() {
+    let mut h = Harness::new();
+    let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
+    let dev = h.device("MX Master 3S").await;
+    assert!(!sim.snapshot(DIRECT).await.unwrap().thumb_diverted);
+    let mailbox = h.shared.registry.mailbox(&dev.id).unwrap();
+    h.shared.monitoring.store(true, std::sync::atomic::Ordering::Relaxed);
+    mailbox.send(DeviceMsg::Monitor(true)).unwrap();
+    h.settle().await;
+    // Diverted so turns can be seen, while still scrolling at native speed.
+    assert!(sim.snapshot(DIRECT).await.unwrap().thumb_diverted);
+    let lights = |h: &mut Harness| {
+        let mut out = Vec::new();
+        while let Ok(ev) = h.events.try_recv() {
+            if let DaemonEvent::Button { control, pressed, .. } = ev {
+                out.push((control, pressed));
+            }
+        }
+        out
+    };
+    lights(&mut h);
+    sim.send(SimCommand::Thumbwheel { slot: DIRECT, rotation: -10, status: 1, flags: 0 });
+    sim.send(SimCommand::Thumbwheel { slot: DIRECT, rotation: 0, status: 3, flags: 0 });
+    let input = h.input().await;
+    let horizontal: i32 = input.iter().map(|r| if let Recorded::Scroll(_, x) = r { *x } else { 0 }).sum();
+    assert_eq!(horizontal, 180, "{input:?}");
+    let on_off = vec![("thumbwheel".to_string(), true), ("thumbwheel".to_string(), false)];
+    assert_eq!(lights(&mut h), on_off);
+
+    // Without a stop report the light goes out by itself.
+    sim.send(SimCommand::Thumbwheel { slot: DIRECT, rotation: -10, status: 2, flags: 0 });
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(lights(&mut h), on_off);
+
+    // Not watched any more: the wheel is native again.
+    h.shared.monitoring.store(false, std::sync::atomic::Ordering::Relaxed);
+    mailbox.send(DeviceMsg::Monitor(false)).unwrap();
+    h.settle().await;
+    assert!(!sim.snapshot(DIRECT).await.unwrap().thumb_diverted);
+}
