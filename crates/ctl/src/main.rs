@@ -166,7 +166,64 @@ fn battery_text(d: &Value) -> String {
     }
 }
 
-fn print_info(d: &Value) {
+fn key_label(name: &str) -> String {
+    let k = name.trim_start_matches("KEY_");
+    match k {
+        "LEFTCTRL" | "RIGHTCTRL" => "Ctrl".into(),
+        "LEFTSHIFT" | "RIGHTSHIFT" => "Shift".into(),
+        "LEFTALT" => "Alt".into(),
+        "RIGHTALT" => "AltGr".into(),
+        "LEFTMETA" | "RIGHTMETA" => "Super".into(),
+        k if k.len() == 1 => k.into(),
+        k => {
+            let mut c = k.chars();
+            c.next().map(|f| f.to_string() + &c.as_str().to_lowercase()).unwrap_or_default()
+        }
+    }
+}
+
+/// A short human description of an action, using the catalog for built-in labels.
+fn describe(action: &Value, catalog: &Value) -> String {
+    let builtin = |id: &str| {
+        catalog["actions"]
+            .as_array()
+            .and_then(|a| a.iter().find(|x| x["id"] == id))
+            .and_then(|x| x["label"].as_str())
+            .unwrap_or(id)
+            .to_string()
+    };
+    match action["type"].as_str().unwrap_or("default") {
+        "default" => "default".into(),
+        "none" => "disabled".into(),
+        "builtin" => builtin(action["id"].as_str().unwrap_or("")),
+        "keys" => action["keys"]
+            .as_array()
+            .map(|k| k.iter().filter_map(|x| x.as_str()).map(key_label).collect::<Vec<_>>().join(" + "))
+            .unwrap_or_default(),
+        "mouse" => format!("{} button", action["button"].as_str().unwrap_or("?")),
+        "command" => format!("run `{}`", action["command"].as_str().unwrap_or("")),
+        "open" => format!("open {}", action["target"].as_str().unwrap_or("")),
+        "set-dpi" => format!("{} DPI", action["dpi"]),
+        "shift-dpi" => format!("{} DPI while held", action["dpi"]),
+        "switch-host" => format!("switch to computer {}", action["host"].as_u64().unwrap_or(0) + 1),
+        "macro" => format!("macro ({} steps)", action["steps"].as_array().map_or(0, |s| s.len())),
+        "gestures" if action["mode"] == "pan" => "pan & scroll".into(),
+        "gestures" => {
+            let part = |dir: &str, arrow: &str| format!("{arrow} {}", describe(&action[dir], catalog));
+            format!(
+                "gestures: {}, {}, {}, {}, click {}",
+                part("up", "↑"),
+                part("down", "↓"),
+                part("left", "←"),
+                part("right", "→"),
+                describe(&action["click"], catalog)
+            )
+        }
+        other => other.to_string(),
+    }
+}
+
+fn print_info(d: &Value, catalog: &Value) {
     let online = if d["online"] == true { style("32", "online") } else { style("90", "offline") };
     println!(
         "{}  {}  {}",
@@ -223,7 +280,7 @@ fn print_info(d: &Value) {
         println!("  controls");
         for c in controls.iter().filter(|c| c["is_virtual"] != true) {
             let key = c["key"].as_str().unwrap_or("");
-            let binding = bindings.get(key).map(|b| b.to_string()).unwrap_or_else(|| style("90", "default"));
+            let binding = bindings.get(key).map(|b| describe(b, catalog)).unwrap_or_else(|| style("90", "default"));
             println!("    {:<14} {:<20} {binding}", key, c["name"].as_str().unwrap_or(""));
         }
     }
@@ -258,7 +315,12 @@ async fn main() -> Result<()> {
         }
         Cmd::Info { device, json } => {
             let d = client.device(device.as_deref()).await?;
-            if json { println!("{}", serde_json::to_string_pretty(&d)?) } else { print_info(&d) }
+            if json {
+                println!("{}", serde_json::to_string_pretty(&d)?)
+            } else {
+                let catalog = client.json("GetCatalog").await.unwrap_or_default();
+                print_info(&d, &catalog)
+            }
         }
         Cmd::Set { device, settings } => {
             let d = client.device(device.as_deref()).await?;
