@@ -121,15 +121,19 @@ impl Actor {
     }
 
     async fn run(mut self, mut rx: mpsc::UnboundedReceiver<DeviceMsg>) {
-        // Initialize, waiting for the device to come online if needed.
+        // Initialize. A device that does not answer yet (it just reconnected, or
+        // is asleep) is retried with a growing delay; a receiver also tells us
+        // when one of its devices comes back.
         let mut online = true;
+        let mut attempt: u32 = 0;
         loop {
             if online {
                 match self.init().await {
                     Ok(()) => break,
                     Err(e) if e.is_offline() => {
-                        debug!("device {:#04x} on {} is offline: {e}", self.index, self.connection.node);
+                        debug!("device {:#04x} on {} is not answering: {e}", self.index, self.connection.node);
                         online = false;
+                        attempt += 1;
                     }
                     Err(e) => {
                         debug!("ignoring device {:#04x} on {}: {e}", self.index, self.connection.node);
@@ -137,17 +141,31 @@ impl Actor {
                     }
                 }
             }
-            match rx.recv().await {
-                Some(DeviceMsg::Online(true)) => online = true,
-                Some(DeviceMsg::Online(false)) | Some(DeviceMsg::Report(_)) | Some(DeviceMsg::Monitor(_)) => {}
-                Some(DeviceMsg::Command(_, reply)) => {
+            let retry = (attempt > 0 && attempt <= 8).then(|| Duration::from_millis(500 << (attempt - 1).min(6)));
+            let msg = match retry {
+                Some(delay) => tokio::select! {
+                    msg = rx.recv() => Some(msg),
+                    _ = tokio::time::sleep(delay) => None,
+                },
+                None => Some(rx.recv().await),
+            };
+            match msg {
+                None => online = true,
+                Some(Some(DeviceMsg::Online(true))) => {
+                    online = true;
+                    attempt = 0;
+                }
+                // The receiver says it is gone: wait for it instead of polling.
+                Some(Some(DeviceMsg::Online(false))) => attempt = 0,
+                Some(Some(DeviceMsg::Report(_))) | Some(Some(DeviceMsg::Monitor(_))) => {}
+                Some(Some(DeviceMsg::Command(_, reply))) => {
                     let _ = reply.send(Err("device is offline".into()));
                 }
-                Some(DeviceMsg::Stop(ack)) => {
+                Some(Some(DeviceMsg::Stop(ack))) => {
                     let _ = ack.send(());
                     return;
                 }
-                Some(DeviceMsg::Shutdown) | None => return,
+                Some(Some(DeviceMsg::Shutdown)) | Some(None) => return,
             }
         }
 

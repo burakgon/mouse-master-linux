@@ -57,6 +57,8 @@ pub struct DeviceSpec {
     pub current_host: u8,
     pub battery_percent: u8,
     pub torque: bool,
+    /// Start without answering requests, like a device that just reconnected.
+    pub start_offline: bool,
 }
 
 impl DeviceSpec {
@@ -97,6 +99,7 @@ impl DeviceSpec {
             current_host: 1,
             battery_percent: 65,
             torque: false,
+            start_offline: false,
         }
     }
 
@@ -182,7 +185,7 @@ impl DeviceState {
             haptic_level: 60,
             played: Vec::new(),
             pressed: Vec::new(),
-            online: true,
+            online: !spec.start_offline,
             spec,
         }
     }

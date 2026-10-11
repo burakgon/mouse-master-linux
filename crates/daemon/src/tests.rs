@@ -434,6 +434,21 @@ async fn receiver_devices_reconnect() {
 }
 
 #[tokio::test]
+async fn unresponsive_device_is_retried() {
+    let h = Harness::new();
+    let mut spec = DeviceSpec::mx_master_3s();
+    spec.start_offline = true;
+    let sim = h.sim(Topology::Direct(spec));
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(h.shared.registry.snapshots().is_empty());
+    // It starts answering; the next retry picks it up without any notification.
+    sim.send(SimCommand::Online { slot: DIRECT, online: true });
+    let dev = h.device("MX Master 3S").await;
+    assert!(dev.online);
+    assert_eq!(sim.snapshot(DIRECT).await.unwrap().reporting.get(&GESTURE), Some(&0x11));
+}
+
+#[tokio::test]
 async fn stopping_restores_native_behaviour() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
