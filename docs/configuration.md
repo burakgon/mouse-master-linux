@@ -111,8 +111,8 @@ type = "gestures"
 mode = "directional"        # or "pan": move the mouse to scroll in any direction
 up = { type = "builtin", id = "overview" }
 down = { type = "builtin", id = "show-desktop" }
-left = { type = "builtin", id = "workspace-right" }
-right = { type = "builtin", id = "workspace-left" }
+left = { type = "builtin", id = "workspace-left" }
+right = { type = "builtin", id = "workspace-right" }
 click = { type = "builtin", id = "overview" }   # press and release without moving
 threshold_mm = 7.0          # distance before a direction is recognised
 trigger = "move"            # or "release"

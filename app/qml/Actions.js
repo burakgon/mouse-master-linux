@@ -167,7 +167,7 @@ function b(id) { return { type: "builtin", id: id } }
 
 var gesturePresets = [
     { id: "desktop", label: "Desktop navigation", icon: "layout-grid",
-      set: { mode: "directional", up: b("overview"), down: b("show-desktop"), left: b("workspace-right"), right: b("workspace-left"), click: b("overview") } },
+      set: { mode: "directional", up: b("overview"), down: b("show-desktop"), left: b("workspace-left"), right: b("workspace-right"), click: b("overview") } },
     { id: "media", label: "Media", icon: "play",
       set: { mode: "directional", up: b("volume-up"), down: b("volume-down"), left: b("previous-track"), right: b("next-track"), click: b("play-pause"), repeat_vertical: true } },
     { id: "windows", label: "Window management", icon: "app-window",
@@ -183,7 +183,7 @@ var gesturePresets = [
 function gestureFromPreset(preset, current) {
     var base = { type: "gestures", mode: "directional", threshold_mm: 7, trigger: "move",
                  repeat_vertical: false, repeat_horizontal: false, pan_speed: 1.0, pan_invert: false,
-                 up: b("overview"), down: b("show-desktop"), left: b("workspace-right"), right: b("workspace-left"), click: b("overview") }
+                 up: b("overview"), down: b("show-desktop"), left: b("workspace-left"), right: b("workspace-right"), click: b("overview") }
     if (current) {
         base.threshold_mm = current.threshold_mm || base.threshold_mm
         base.trigger = current.trigger || base.trigger

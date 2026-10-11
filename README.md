@@ -186,8 +186,8 @@ smartshift_threshold = 12
 type = "gestures"
 up = { type = "builtin", id = "overview" }
 down = { type = "builtin", id = "show-desktop" }
-left = { type = "builtin", id = "workspace-right" }
-right = { type = "builtin", id = "workspace-left" }
+left = { type = "builtin", id = "workspace-left" }
+right = { type = "builtin", id = "workspace-right" }
 click = { type = "builtin", id = "overview" }
 
 [devices."b034-5C8F7AF8".bindings.buttons.back]
