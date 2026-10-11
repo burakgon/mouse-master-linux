@@ -54,7 +54,11 @@ fn main() -> Result<()> {
     // systemd adds its own timestamps.
     let under_systemd = std::env::var_os("JOURNAL_STREAM").is_some();
     let builder = tracing_subscriber::fmt().with_env_filter(filter).with_target(args.verbose > 0);
-    if under_systemd { builder.without_time().init() } else { builder.init() }
+    if under_systemd {
+        builder.without_time().init()
+    } else {
+        builder.init()
+    }
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)

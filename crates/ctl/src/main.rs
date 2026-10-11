@@ -89,7 +89,10 @@ impl Client {
     {
         self.conn.call_method(Some(BUS_NAME), OBJECT_PATH, Some(INTERFACE), method, body).await.map_err(|e| match e {
             zbus::Error::MethodError(name, msg, _) if name.as_str() == "org.freedesktop.DBus.Error.ServiceUnknown" => {
-                anyhow!("the Mouse Master service is not running (start it with `systemctl --user start mouse-master`){}", msg.map(|m| format!(": {m}")).unwrap_or_default())
+                anyhow!(
+                    "the Mouse Master service is not running (start it with `systemctl --user start mouse-master`){}",
+                    msg.map(|m| format!(": {m}")).unwrap_or_default()
+                )
             }
             zbus::Error::MethodError(_, Some(msg), _) => anyhow!(msg),
             other => anyhow!(other),
@@ -152,7 +155,10 @@ fn battery_text(d: &Value) -> String {
     if b.is_null() {
         return "—".into();
     }
-    let pct = b["percent"].as_u64().map(|p| format!("{p}%")).unwrap_or_else(|| b["level"].as_str().unwrap_or("?").to_string());
+    let pct = b["percent"]
+        .as_u64()
+        .map(|p| format!("{p}%"))
+        .unwrap_or_else(|| b["level"].as_str().unwrap_or("?").to_string());
     match b["state"].as_str() {
         Some("charging") | Some("charging-slow") => format!("{pct} ⚡"),
         Some("full") => format!("{pct} (full)"),
@@ -162,13 +168,24 @@ fn battery_text(d: &Value) -> String {
 
 fn print_info(d: &Value) {
     let online = if d["online"] == true { style("32", "online") } else { style("90", "offline") };
-    println!("{}  {}  {}", style("1", d["name"].as_str().unwrap_or("?")), online, style("90", d["id"].as_str().unwrap_or("")));
+    println!(
+        "{}  {}  {}",
+        style("1", d["name"].as_str().unwrap_or("?")),
+        online,
+        style("90", d["id"].as_str().unwrap_or(""))
+    );
     let conn = &d["connection"];
-    let via = conn["receiver"].as_str().map(str::to_string).unwrap_or_else(|| conn["bus"].as_str().unwrap_or("?").to_string());
+    let via = conn["receiver"]
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| conn["bus"].as_str().unwrap_or("?").to_string());
     println!("  connection   {via}");
     println!("  battery      {}", battery_text(d));
     if let Some(fw) = d["firmware"].as_array() {
-        let list: Vec<String> = fw.iter().map(|f| format!("{} {}", f["name"].as_str().unwrap_or(""), f["version"].as_str().unwrap_or(""))).collect();
+        let list: Vec<String> = fw
+            .iter()
+            .map(|f| format!("{} {}", f["name"].as_str().unwrap_or(""), f["version"].as_str().unwrap_or("")))
+            .collect();
         println!("  firmware     {}", list.join(", "));
     }
     if let Some(s) = d["serial"].as_str() {
@@ -194,7 +211,11 @@ fn print_info(d: &Value) {
     if let Some(hosts) = st["hosts"].as_array() {
         for h in hosts {
             let mark = if h["current"] == true { style("32", "●") } else { "○".into() };
-            println!("  host {}       {mark} {}", h["index"].as_u64().unwrap_or(0) + 1, h["name"].as_str().unwrap_or(""));
+            println!(
+                "  host {}       {mark} {}",
+                h["index"].as_u64().unwrap_or(0) + 1,
+                h["name"].as_str().unwrap_or("")
+            );
         }
     }
     if let Some(controls) = d["controls"].as_array() {
@@ -209,7 +230,12 @@ fn print_info(d: &Value) {
     if let Some(profiles) = d["config"]["profiles"].as_array() {
         for p in profiles {
             let active = if d["active_profile"] == p["id"] { style("32", " (active)") } else { String::new() };
-            println!("  profile      {} [{}] {}{active}", p["name"].as_str().unwrap_or(""), p["id"].as_str().unwrap_or(""), p["apps"]);
+            println!(
+                "  profile      {} [{}] {}{active}",
+                p["name"].as_str().unwrap_or(""),
+                p["id"].as_str().unwrap_or(""),
+                p["apps"]
+            );
         }
     }
 }
@@ -222,7 +248,12 @@ async fn main() -> Result<()> {
         Cmd::List => {
             for d in client.devices().await? {
                 let online = if d["online"] == true { style("32", "●") } else { style("90", "○") };
-                println!("{online} {:<24} {:<16} battery {}", d["name"].as_str().unwrap_or("?"), d["id"].as_str().unwrap_or(""), battery_text(&d));
+                println!(
+                    "{online} {:<24} {:<16} battery {}",
+                    d["name"].as_str().unwrap_or("?"),
+                    d["id"].as_str().unwrap_or(""),
+                    battery_text(&d)
+                );
             }
         }
         Cmd::Info { device, json } => {
@@ -237,7 +268,9 @@ async fn main() -> Result<()> {
                 let value = serde_json::from_str(v).unwrap_or_else(|_| Value::String(v.to_string()));
                 patch.insert(k.to_string(), value);
             }
-            client.command(d["id"].as_str().unwrap_or(""), json!({"command": "set-settings", "settings": patch})).await?;
+            client
+                .command(d["id"].as_str().unwrap_or(""), json!({"command": "set-settings", "settings": patch}))
+                .await?;
             println!("ok");
         }
         Cmd::Bind { device, profile, control, action } => {
@@ -245,7 +278,10 @@ async fn main() -> Result<()> {
             let action = parse_action(&action)?;
             let action = if action["type"] == "default" { Value::Null } else { action };
             client
-                .command(d["id"].as_str().unwrap_or(""), json!({"command": "set-binding", "profile": profile, "control": control, "action": action}))
+                .command(
+                    d["id"].as_str().unwrap_or(""),
+                    json!({"command": "set-binding", "profile": profile, "control": control, "action": action}),
+                )
                 .await?;
             println!("ok");
         }
@@ -254,14 +290,21 @@ async fn main() -> Result<()> {
             match device {
                 Some(dev) => {
                     let d = client.device(Some(&dev)).await?;
-                    client.command(d["id"].as_str().unwrap_or(""), json!({"command": "run-action", "action": action})).await?;
+                    client
+                        .command(d["id"].as_str().unwrap_or(""), json!({"command": "run-action", "action": action}))
+                        .await?;
                 }
                 None => {
                     // Device actions need a device; use the first one when there is one.
                     let first = client.device(None).await.ok();
                     match first {
                         Some(d) if d["online"] == true => {
-                            client.command(d["id"].as_str().unwrap_or(""), json!({"command": "run-action", "action": action})).await?;
+                            client
+                                .command(
+                                    d["id"].as_str().unwrap_or(""),
+                                    json!({"command": "run-action", "action": action}),
+                                )
+                                .await?;
                         }
                         _ => {
                             client.call("RunAction", &(action.to_string(),)).await?;
@@ -275,8 +318,15 @@ async fn main() -> Result<()> {
             println!("Desktop: {}", catalog["desktop"].as_str().unwrap_or("?"));
             for cat in catalog["categories"].as_array().cloned().unwrap_or_default() {
                 println!("\n{}", style("1", cat["label"].as_str().unwrap_or("")));
-                for a in catalog["actions"].as_array().cloned().unwrap_or_default().iter().filter(|a| a["category"] == cat["id"]) {
-                    let avail = if a["available"] == true { String::new() } else { style("90", " (not available here)") };
+                for a in catalog["actions"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                    .iter()
+                    .filter(|a| a["category"] == cat["id"])
+                {
+                    let avail =
+                        if a["available"] == true { String::new() } else { style("90", " (not available here)") };
                     println!("  {:<26} {}{avail}", a["id"].as_str().unwrap_or(""), a["label"].as_str().unwrap_or(""));
                 }
             }
@@ -323,7 +373,11 @@ async fn main() -> Result<()> {
                     "FocusChanged" => {
                         let (app,): (String,) = msg.body().deserialize()?;
                         let v: Value = serde_json::from_str(&app).unwrap_or_default();
-                        println!("focus    {} — {}", v["app_id"].as_str().unwrap_or(""), v["title"].as_str().unwrap_or(""));
+                        println!(
+                            "focus    {} — {}",
+                            v["app_id"].as_str().unwrap_or(""),
+                            v["title"].as_str().unwrap_or("")
+                        );
                     }
                     "DeviceChanged" => {
                         let (id, snap): (String, String) = msg.body().deserialize()?;

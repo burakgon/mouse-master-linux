@@ -94,10 +94,11 @@ pub struct DeviceSettings {
 }
 
 /// What the thumb wheel does.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum ThumbwheelBinding {
     /// Native horizontal scrolling (not diverted).
+    #[default]
     Default,
     /// Horizontal scrolling with a custom speed. Direction follows `thumbwheel_invert`.
     Scroll {
@@ -120,12 +121,6 @@ fn one() -> f32 {
 
 fn default_step_degrees() -> f32 {
     20.0
-}
-
-impl Default for ThumbwheelBinding {
-    fn default() -> Self {
-        ThumbwheelBinding::Default
-    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -170,7 +165,14 @@ pub struct AppProfile {
 
 impl Default for AppProfile {
     fn default() -> Self {
-        AppProfile { id: String::new(), name: String::new(), apps: Vec::new(), enabled: true, bindings: Bindings::default(), dpi: None }
+        AppProfile {
+            id: String::new(),
+            name: String::new(),
+            apps: Vec::new(),
+            enabled: true,
+            bindings: Bindings::default(),
+            dpi: None,
+        }
     }
 }
 
@@ -205,7 +207,10 @@ impl Config {
         std::fs::create_dir_all(dir)?;
         let text = toml::to_string_pretty(self)?;
         let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
-        std::io::Write::write_all(&mut tmp, b"# Mouse Master configuration. Edit with the app, or by hand while the service is stopped.\n\n")?;
+        std::io::Write::write_all(
+            &mut tmp,
+            b"# Mouse Master configuration. Edit with the app, or by hand while the service is stopped.\n\n",
+        )?;
         std::io::Write::write_all(&mut tmp, text.as_bytes())?;
         tmp.persist(path)?;
         Ok(())
@@ -244,10 +249,6 @@ impl ConfigStore {
             }
         });
         store
-    }
-
-    pub fn path(&self) -> &Path {
-        &self.path
     }
 
     pub fn get(&self) -> Config {

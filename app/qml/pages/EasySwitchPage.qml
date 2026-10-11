@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
@@ -34,8 +35,8 @@ ScrollPage {
                     RowLayout {
                         Layout.fillWidth: true
                         Rectangle {
-                            width: 40
-                            height: 40
+                            Layout.preferredWidth: 40
+                            Layout.preferredHeight: 40
                             radius: 20
                             color: hostCard.current ? Theme.accent : Theme.surfaceAlt
                             border.width: hostCard.current ? 0 : 1
@@ -51,8 +52,8 @@ ScrollPage {
                         Item { Layout.fillWidth: true }
                         Rectangle {
                             visible: hostCard.current
-                            height: 24
-                            width: thisLabel.implicitWidth + 18
+                            Layout.preferredHeight: 24
+                            Layout.preferredWidth: thisLabel.implicitWidth + 18
                             radius: 12
                             color: Theme.accentAlpha(Theme.dark ? 0.2 : 0.12)
                             Text {

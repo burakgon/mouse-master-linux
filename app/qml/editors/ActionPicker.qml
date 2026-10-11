@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -271,6 +272,7 @@ Item {
                     onClicked: root.expandedCustom = root.expandedCustom === "dpi" ? "" : "dpi"
                 }
                 ColumnLayout {
+                    id: dpiBox
                     visible: root.expandedCustom === "dpi" && !!root.device && !!root.device.capabilities.dpi
                     width: parent.width - 16
                     x: 8
@@ -288,8 +290,8 @@ Item {
                         SliderField {
                             id: dpiSlider
                             Layout.fillWidth: true
-                            from: parent.parent.caps.min
-                            to: parent.parent.caps.max
+                            from: dpiBox.caps.min
+                            to: dpiBox.caps.max
                             stepSize: 50
                             snapMode: C.Slider.SnapAlways
                             value: (root.isType("set-dpi") || root.isType("shift-dpi")) ? root.action.dpi : 400

@@ -1,0 +1,42 @@
+name: Device report
+description: Tell us how Mouse Master works with your device
+labels: [device]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: "MX Anywhere 3S"
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options: [Bluetooth, Bolt receiver, Unifying receiver, Lightspeed receiver, USB cable]
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What works?
+      options:
+        - label: The device shows up with the right name and battery
+        - label: Remapping buttons
+        - label: Gestures
+        - label: Pointer speed (DPI)
+        - label: SmartShift / scroll wheel settings
+        - label: Thumb wheel
+        - label: Easy-Switch
+  - type: textarea
+    id: info
+    attributes:
+      label: Device information
+      description: Output of `mouse-masterctl info --json`
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?

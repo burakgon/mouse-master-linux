@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import "Actions.js" as Actions
 
@@ -9,6 +10,7 @@ Row {
     Repeater {
         model: root.keys
         delegate: Rectangle {
+            id: cap
             required property string modelData
             height: 26
             width: Math.max(26, capText.implicitWidth + 14)
@@ -28,7 +30,7 @@ Row {
                 id: capText
                 anchors.centerIn: parent
                 anchors.verticalCenterOffset: -1
-                text: Actions.keyLabel(modelData)
+                text: Actions.keyLabel(cap.modelData)
                 color: Theme.text
                 font.pixelSize: Theme.fontCaption
                 font.weight: Font.DemiBold

@@ -75,7 +75,12 @@ pub async fn read(dev: &Device) -> Result<SmartShift> {
 }
 
 /// Changes the wheel configuration. `None` leaves a value unchanged.
-pub async fn write(dev: &Device, mode: Option<WheelMode>, auto_disengage: Option<u8>, torque: Option<u8>) -> Result<()> {
+pub async fn write(
+    dev: &Device,
+    mode: Option<WheelMode>,
+    auto_disengage: Option<u8>,
+    torque: Option<u8>,
+) -> Result<()> {
     let mode_byte = match mode {
         None => 0,
         Some(WheelMode::FreeSpin) => 1,

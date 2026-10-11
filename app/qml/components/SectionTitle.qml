@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 RowLayout {
+    id: root
     property string text
     property string subtitle: ""
     spacing: 8
@@ -10,13 +11,13 @@ RowLayout {
         spacing: 2
         Layout.fillWidth: true
         Label {
-            text: parent.parent.text
+            text: root.text
             size: Theme.fontHeadline
             strong: true
         }
         Label {
-            visible: parent.parent.subtitle !== ""
-            text: parent.parent.subtitle
+            visible: root.subtitle !== ""
+            text: root.subtitle
             secondary: true
             size: Theme.fontSmall
             wrapMode: Text.WordWrap

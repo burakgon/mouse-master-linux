@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -45,10 +46,13 @@ C.ApplicationWindow {
     // the Buttons page and a theme override ("light" or "dark") that is not persisted.
     property string devControl: ""
     property string devTheme: ""
+    property string devDevice: ""
     onDevThemeChanged: if (devTheme !== "") Theme.mode = devTheme === "light" ? 1 : 2
 
     property string currentDevice: {
         Daemon.devices
+        if (devDevice !== "" && Daemon.device(devDevice).id !== undefined)
+            return devDevice
         if (prefs.device !== "" && Daemon.device(prefs.device).id !== undefined)
             return prefs.device
         var list = Daemon.devices
@@ -101,7 +105,7 @@ C.ApplicationWindow {
         }
         Rectangle {
             Layout.fillHeight: true
-            width: 1
+            Layout.preferredWidth: 1
             color: Theme.stroke
         }
 

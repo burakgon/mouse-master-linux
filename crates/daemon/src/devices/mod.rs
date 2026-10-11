@@ -27,11 +27,23 @@ pub enum DaemonEvent {
     /// A device's snapshot changed.
     DeviceChanged(String),
     /// A diverted control was pressed or released.
-    Button { device: String, control: String, pressed: bool },
+    Button {
+        device: String,
+        control: String,
+        pressed: bool,
+    },
     /// Raw motion while a gesture button is held (only while monitoring).
-    Motion { device: String, dx: i32, dy: i32 },
+    Motion {
+        device: String,
+        dx: i32,
+        dy: i32,
+    },
     /// A gesture was recognised.
-    Gesture { device: String, control: String, gesture: String },
+    Gesture {
+        device: String,
+        control: String,
+        gesture: String,
+    },
     ActiveApp(ActiveApp),
 }
 
@@ -40,21 +52,55 @@ pub enum DaemonEvent {
 #[serde(tag = "command", rename_all = "kebab-case")]
 pub enum Command {
     /// Partial update of the hardware settings (keys of `DeviceSettings`).
-    SetSettings { settings: serde_json::Value },
+    SetSettings {
+        settings: serde_json::Value,
+    },
     /// Sets (or with `action: null` removes) a button binding. `profile: null` is the default profile.
-    SetBinding { profile: Option<String>, control: String, action: Option<Action> },
-    SetThumbwheel { profile: Option<String>, binding: Option<ThumbwheelBinding> },
-    SetThumbwheelTap { profile: Option<String>, action: Option<Action> },
+    SetBinding {
+        profile: Option<String>,
+        control: String,
+        action: Option<Action>,
+    },
+    SetThumbwheel {
+        profile: Option<String>,
+        binding: Option<ThumbwheelBinding>,
+    },
+    SetThumbwheelTap {
+        profile: Option<String>,
+        action: Option<Action>,
+    },
     /// Restores the default bindings of a profile.
-    ResetBindings { profile: Option<String> },
-    AddProfile { name: String, apps: Vec<String> },
-    UpdateProfile { id: String, name: Option<String>, apps: Option<Vec<String>>, enabled: Option<bool>, dpi: Option<Option<u16>> },
-    RemoveProfile { id: String },
-    SwitchHost { host: u8 },
-    SetHostName { host: u8, name: String },
-    PlayHaptic { waveform: u8 },
+    ResetBindings {
+        profile: Option<String>,
+    },
+    AddProfile {
+        name: String,
+        apps: Vec<String>,
+    },
+    UpdateProfile {
+        id: String,
+        name: Option<String>,
+        apps: Option<Vec<String>>,
+        enabled: Option<bool>,
+        dpi: Option<Option<u16>>,
+    },
+    RemoveProfile {
+        id: String,
+    },
+    SwitchHost {
+        host: u8,
+    },
+    SetHostName {
+        host: u8,
+        name: String,
+    },
+    PlayHaptic {
+        waveform: u8,
+    },
     /// Runs an action as if triggered by this device (to try it out).
-    RunAction { action: Action },
+    RunAction {
+        action: Action,
+    },
     /// Re-reads everything from the device and applies the configuration again.
     Refresh,
     /// Re-evaluates which application profile applies (after general settings changed).

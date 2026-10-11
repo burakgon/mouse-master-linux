@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -27,6 +28,7 @@ ColumnLayout {
         Repeater {
             model: Actions.thumbwheelModes
             delegate: Rectangle {
+                id: tile
                 required property var modelData
                 readonly property bool current: root.mode === modelData.id
                 Layout.fillWidth: true
@@ -36,22 +38,22 @@ ColumnLayout {
                 border.width: current ? 2 : 1
                 border.color: current ? Theme.accentAlpha(0.7) : Theme.stroke
                 HoverHandler { id: modeHover; cursorShape: Qt.PointingHandCursor }
-                TapHandler { onTapped: root.bindingEdited(Actions.thumbwheelBindingFor(modelData.id, root.binding)) }
+                TapHandler { onTapped: root.bindingEdited(Actions.thumbwheelBindingFor(tile.modelData.id, root.binding)) }
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 12
                     anchors.rightMargin: 10
                     spacing: 10
                     Icon {
-                        name: modelData.icon
+                        name: tile.modelData.icon
                         size: 18
-                        color: parent.parent.current ? Theme.accent : Theme.textSecondary
+                        color: tile.current ? Theme.accent : Theme.textSecondary
                     }
                     Label {
                         Layout.fillWidth: true
-                        text: modelData.label
+                        text: tile.modelData.label
                         size: Theme.fontSmall
-                        strong: parent.parent.current
+                        strong: tile.current
                         wrapMode: Text.WordWrap
                         maximumLineCount: 2
                     }

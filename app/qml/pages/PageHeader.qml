@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 RowLayout {
+    id: root
     property string title
     property string subtitle: ""
     default property alias trailing: trailingRow.data
@@ -11,14 +12,14 @@ RowLayout {
         Layout.fillWidth: true
         spacing: 4
         Label {
-            text: parent.parent.title
+            text: root.title
             size: Theme.fontTitle + 4
             strong: true
             Layout.fillWidth: true
         }
         Label {
-            visible: parent.parent.subtitle !== ""
-            text: parent.parent.subtitle
+            visible: root.subtitle !== ""
+            text: root.subtitle
             secondary: true
             wrapMode: Text.WordWrap
             Layout.fillWidth: true

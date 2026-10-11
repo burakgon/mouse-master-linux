@@ -269,7 +269,9 @@ impl DeviceState {
                 let Some(control) = spec.controls.iter().find(|c| c.cid == cid).copied() else { return Err(0x02) };
                 let bits = p(2);
                 let mut flags = self.reporting.get(&cid).copied().unwrap_or(0);
-                for (value, valid, capability) in [(0x01u8, 0x02u8, 0x0020u16), (0x04, 0x08, 0x0040), (0x10, 0x20, 0x0100), (0x40, 0x80, 0x0200)] {
+                for (value, valid, capability) in
+                    [(0x01u8, 0x02u8, 0x0020u16), (0x04, 0x08, 0x0040), (0x10, 0x20, 0x0100), (0x40, 0x80, 0x0200)]
+                {
                     if bits & valid != 0 {
                         if bits & value != 0 {
                             if control.flags & capability == 0 {
@@ -411,18 +413,41 @@ pub enum Topology {
 #[derive(Debug, Clone)]
 pub enum SimCommand {
     /// The set of controls held down on the device in `slot` (0xFF for direct devices).
-    Buttons { slot: u8, cids: Vec<u16> },
+    Buttons {
+        slot: u8,
+        cids: Vec<u16>,
+    },
     /// Pointer motion; reported over HID++ only while a raw XY diverted control is held.
-    Motion { slot: u8, dx: i16, dy: i16 },
+    Motion {
+        slot: u8,
+        dx: i16,
+        dy: i16,
+    },
     /// Thumb wheel rotation; reported only while the wheel is diverted.
-    Thumbwheel { slot: u8, rotation: i16, status: u8, flags: u8 },
+    Thumbwheel {
+        slot: u8,
+        rotation: i16,
+        status: u8,
+        flags: u8,
+    },
     /// The ratchet engaged or disengaged (mode shift button).
-    Ratchet { slot: u8, engaged: bool },
-    Battery { slot: u8, percent: u8 },
+    Ratchet {
+        slot: u8,
+        engaged: bool,
+    },
+    Battery {
+        slot: u8,
+        percent: u8,
+    },
     /// A device paired with a receiver goes on- or offline.
-    Online { slot: u8, online: bool },
+    Online {
+        slot: u8,
+        online: bool,
+    },
     /// The device loses all volatile settings and asks to be reconfigured.
-    PowerCycle { slot: u8 },
+    PowerCycle {
+        slot: u8,
+    },
 }
 
 /// A probe into the simulation state, for assertions.
@@ -480,14 +505,19 @@ struct Sim {
 }
 
 enum SimTopology {
-    Direct(DeviceState),
+    Direct(Box<DeviceState>),
     Receiver { kind: ReceiverKind, slots: Vec<DeviceState> },
 }
 
 fn socketpair() -> io::Result<(OwnedFd, OwnedFd)> {
     let mut fds = [0; 2];
     let r = unsafe {
-        libc::socketpair(libc::AF_UNIX, libc::SOCK_SEQPACKET | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC, 0, fds.as_mut_ptr())
+        libc::socketpair(
+            libc::AF_UNIX,
+            libc::SOCK_SEQPACKET | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC,
+            0,
+            fds.as_mut_ptr(),
+        )
     };
     if r != 0 {
         return Err(io::Error::last_os_error());
@@ -513,7 +543,7 @@ pub fn spawn(topology: Topology) -> io::Result<(OwnedFd, NodeInfo, SimHandle)> {
                 reports: ReportSupport { short: false, long: true, very_long: false, dj: false },
                 is_dj_child: false,
             };
-            (info, SimTopology::Direct(DeviceState::new(spec)))
+            (info, SimTopology::Direct(Box::new(DeviceState::new(spec))))
         }
         Topology::Receiver { kind, devices } => {
             let (pid, name) = match kind {
@@ -549,7 +579,10 @@ impl Sim {
             tokio::select! {
                 ready = self.io.readable() => {
                     let Ok(mut guard) = ready else { return };
-                    let n = match guard.try_io(|inner| (&*inner.get_ref()).read(&mut buf)) {
+                    let n = match guard.try_io(|inner| {
+                        let mut file: &File = inner.get_ref();
+                        file.read(&mut buf)
+                    }) {
                         Ok(Ok(0)) => return, // host side closed
                         Ok(Ok(n)) => n,
                         Ok(Err(_)) => return,
@@ -594,7 +627,10 @@ impl Sim {
     async fn write(&self, report: &[u8]) -> io::Result<()> {
         loop {
             let mut guard = self.io.writable().await?;
-            match guard.try_io(|inner| (&*inner.get_ref()).write(report)) {
+            match guard.try_io(|inner| {
+                let mut file: &File = inner.get_ref();
+                file.write(report)
+            }) {
                 Ok(result) => return result.map(|_| ()),
                 Err(_would_block) => continue,
             }
@@ -672,33 +708,43 @@ impl Sim {
             (0x83, 0xB5) => {
                 let reply = match (kind, p0) {
                     (ReceiverKind::Bolt, 0x51..=0x56) => {
-                        let Some(d) = slots.get((p0 - 0x51) as usize) else { return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])] };
+                        let Some(d) = slots.get((p0 - 0x51) as usize) else {
+                            return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])];
+                        };
                         let w = d.spec.wireless_pid.to_le_bytes();
                         let mut v = vec![p0, 0x02, w[0], w[1]];
                         v.extend_from_slice(&d.spec.unit_id.to_be_bytes());
                         v
                     }
                     (ReceiverKind::Bolt, 0x61..=0x66) => {
-                        let Some(d) = slots.get((p0 - 0x61) as usize) else { return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])] };
+                        let Some(d) = slots.get((p0 - 0x61) as usize) else {
+                            return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])];
+                        };
                         let mut v = vec![p0, 0x01, d.spec.name.len().min(13) as u8];
                         v.extend(d.spec.name.as_bytes().iter().take(13));
                         v
                     }
                     (_, 0x03) => vec![0x03, 0x12, 0x34, 0x56, 0x78, 0x00, 0x06],
                     (_, 0x20..=0x25) => {
-                        let Some(d) = slots.get((p0 - 0x20) as usize) else { return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])] };
+                        let Some(d) = slots.get((p0 - 0x20) as usize) else {
+                            return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])];
+                        };
                         let w = d.spec.wireless_pid.to_be_bytes();
                         vec![p0, 0x00, 0x08, w[0], w[1], 0x00, 0x00, 0x02]
                     }
                     (_, 0x30..=0x35) => {
-                        let Some(d) = slots.get((p0 - 0x30) as usize) else { return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])] };
+                        let Some(d) = slots.get((p0 - 0x30) as usize) else {
+                            return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])];
+                        };
                         let mut v = vec![p0];
                         v.extend_from_slice(&d.spec.unit_id.to_be_bytes());
                         v.extend_from_slice(&[0, 0, 0, 0, 0x01]);
                         v
                     }
                     (_, 0x40..=0x45) => {
-                        let Some(d) = slots.get((p0 - 0x40) as usize) else { return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])] };
+                        let Some(d) = slots.get((p0 - 0x40) as usize) else {
+                            return vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])];
+                        };
                         let mut v = vec![p0, d.spec.name.len().min(14) as u8];
                         v.extend(d.spec.name.as_bytes().iter().take(14));
                         v
@@ -707,7 +753,9 @@ impl Sim {
                 };
                 vec![Self::long(0xFF, sub, address, &reply)]
             }
-            (0x83, 0xFB) if kind == ReceiverKind::Bolt => vec![Self::long(0xFF, sub, address, &[0xB0, 0x17, 0x5E, 0xED])],
+            (0x83, 0xFB) if kind == ReceiverKind::Bolt => {
+                vec![Self::long(0xFF, sub, address, &[0xB0, 0x17, 0x5E, 0xED])]
+            }
             _ => vec![Self::short(0xFF, 0x8F, sub, &[address, 0x02])],
         }
     }
@@ -827,7 +875,9 @@ mod tests {
         assert!(dpi::set(&dev, 1601).await.is_err());
 
         // Divert the gesture button with raw XY and press it.
-        reprog_controls::set_reporting(&dev, 0x00C3, reprog_controls::ReportingChange::divert(true, true)).await.unwrap();
+        reprog_controls::set_reporting(&dev, 0x00C3, reprog_controls::ReportingChange::divert(true, true))
+            .await
+            .unwrap();
         let state = sim.snapshot(0xFF).await.unwrap();
         assert_eq!(state.reporting.get(&0x00C3), Some(&0x11));
         sim.press(0xFF, &[0x00C3]);
@@ -860,7 +910,9 @@ mod tests {
         rx.trigger_device_arrival().await.unwrap();
         for slot in 1..=2 {
             let r = tokio::time::timeout(Duration::from_secs(1), events.recv()).await.unwrap().unwrap();
-            assert!(matches!(receiver::decode_event(&r), Some(ReceiverEvent::Connection { slot: s, online: true, .. }) if s == slot));
+            assert!(
+                matches!(receiver::decode_event(&r), Some(ReceiverEvent::Connection { slot: s, online: true, .. }) if s == slot)
+            );
         }
         let dev = Device::open(channel.clone(), 2).await.unwrap();
         assert_eq!(device_info::name(&dev).await.unwrap(), "MX Master 4");

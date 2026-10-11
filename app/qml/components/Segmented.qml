@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 
 // A segmented control. `options` is a list of { value, label, icon? }.
@@ -55,6 +56,7 @@ Rectangle {
     Repeater {
         model: root.options
         delegate: Item {
+            id: segment
             required property var modelData
             required property int index
             x: 3 + index * width
@@ -65,17 +67,17 @@ Rectangle {
                 anchors.centerIn: parent
                 spacing: 6
                 Icon {
-                    visible: !!modelData.icon
-                    name: modelData.icon || ""
+                    visible: !!segment.modelData.icon
+                    name: segment.modelData.icon || ""
                     size: 15
-                    color: index === root.currentIndex ? Theme.text : Theme.textSecondary
+                    color: segment.index === root.currentIndex ? Theme.text : Theme.textSecondary
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
-                    text: modelData.label
+                    text: segment.modelData.label
                     font.pixelSize: Theme.fontSmall
-                    font.weight: index === root.currentIndex ? Font.DemiBold : Font.Medium
-                    color: index === root.currentIndex ? Theme.text : Theme.textSecondary
+                    font.weight: segment.index === root.currentIndex ? Font.DemiBold : Font.Medium
+                    color: segment.index === root.currentIndex ? Theme.text : Theme.textSecondary
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
@@ -83,8 +85,8 @@ Rectangle {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    root.value = modelData.value
-                    root.activated(modelData.value)
+                    root.value = segment.modelData.value
+                    root.activated(segment.modelData.value)
                 }
             }
         }

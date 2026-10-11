@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -63,6 +64,7 @@ Modal {
         spacing: 2
         C.ScrollBar.vertical: C.ScrollBar {}
         delegate: Rectangle {
+            id: appRow
             required property var modelData
             width: list.width - 8
             height: 48
@@ -71,7 +73,7 @@ Modal {
             HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
             TapHandler {
                 onTapped: {
-                    root.chosen(modelData)
+                    root.chosen(appRow.modelData)
                     root.close()
                 }
             }
@@ -81,18 +83,18 @@ Modal {
                 anchors.rightMargin: 10
                 spacing: 12
                 AppIcon {
-                    iconName: modelData.icon
+                    iconName: appRow.modelData.icon
                     size: 28
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
                     Label {
-                        text: modelData.name
+                        text: appRow.modelData.name
                         Layout.fillWidth: true
                     }
                     Label {
-                        text: modelData.id
+                        text: appRow.modelData.id
                         tertiary: true
                         size: Theme.fontCaption
                         Layout.fillWidth: true

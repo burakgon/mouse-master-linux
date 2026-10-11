@@ -39,7 +39,10 @@ impl ActiveApp {
         }
         [&self.app_id, &self.desktop_file].iter().any(|candidate| {
             let c = candidate.trim_end_matches(".desktop").to_ascii_lowercase();
-            !c.is_empty() && (c == pattern || c.rsplit('.').next() == Some(pattern.as_str()) || pattern.rsplit('.').next() == Some(c.as_str()))
+            !c.is_empty()
+                && (c == pattern
+                    || c.rsplit('.').next() == Some(pattern.as_str())
+                    || pattern.rsplit('.').next() == Some(c.as_str()))
         })
     }
 }
@@ -98,7 +101,13 @@ async fn kwin_load_script(conn: &zbus::Connection) -> zbus::Result<()> {
 
 pub async fn kwin_unload_script(conn: &zbus::Connection) {
     let _ = conn
-        .call_method(Some("org.kde.KWin"), "/Scripting", Some("org.kde.kwin.Scripting"), "unloadScript", &(KWIN_SCRIPT_NAME,))
+        .call_method(
+            Some("org.kde.KWin"),
+            "/Scripting",
+            Some("org.kde.kwin.Scripting"),
+            "unloadScript",
+            &(KWIN_SCRIPT_NAME,),
+        )
         .await;
 }
 
@@ -177,7 +186,8 @@ async fn hyprland_events(app_tx: &watch::Sender<ActiveApp>) -> std::io::Result<(
     while let Some(line) = lines.next_line().await? {
         if let Some(data) = line.strip_prefix("activewindow>>") {
             let (class, title) = data.split_once(',').unwrap_or((data, ""));
-            let app = ActiveApp { app_id: class.to_string(), desktop_file: String::new(), title: title.to_string(), pid: 0 };
+            let app =
+                ActiveApp { app_id: class.to_string(), desktop_file: String::new(), title: title.to_string(), pid: 0 };
             app_tx.send_if_modified(|current| {
                 if current.app_id != app.app_id || current.title != app.title {
                     *current = app;
@@ -234,7 +244,8 @@ mod tests {
 
     #[test]
     fn matching() {
-        let app = ActiveApp { app_id: "org.mozilla.firefox".into(), desktop_file: "firefox".into(), ..Default::default() };
+        let app =
+            ActiveApp { app_id: "org.mozilla.firefox".into(), desktop_file: "firefox".into(), ..Default::default() };
         assert!(app.matches("firefox"));
         assert!(app.matches("Firefox.desktop"));
         assert!(app.matches("org.mozilla.firefox"));

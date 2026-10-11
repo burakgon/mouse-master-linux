@@ -239,7 +239,13 @@ impl Channel {
     }
 
     /// Calls a HID++ 2.0 feature function and returns the reply parameters.
-    pub async fn feature_call(&self, device_index: u8, feature_index: u8, function: u8, params: &[u8]) -> Result<Params> {
+    pub async fn feature_call(
+        &self,
+        device_index: u8,
+        feature_index: u8,
+        function: u8,
+        params: &[u8],
+    ) -> Result<Params> {
         let address = (function << 4) | SOFTWARE_ID;
         let kind = self.pick_kind(params.len(), false);
         let report = Report::new(kind, device_index, feature_index, address, params);
@@ -263,7 +269,8 @@ impl Channel {
         let kind = self.pick_kind(params.len(), false);
         let report = Report::new(kind, device_index, sub_id, address, params);
         // Replies to the multi purpose info registers must also echo the sub register.
-        let first_param = if (long && address == 0xB5) || (!long && address == 0xF1) { params.first().copied() } else { None };
+        let first_param =
+            if (long && address == 0xB5) || (!long && address == 0xF1) { params.first().copied() } else { None };
         let matcher = Matcher::Register { device_index, sub_id, address, first_param };
         let mut timeout = Self::default_timeout(device_index, true);
         if long {

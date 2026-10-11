@@ -64,7 +64,12 @@ impl Harness {
     /// Waits until a device with the given name is online and initialized.
     async fn device(&self, name: &str) -> DeviceSnapshot {
         self.eventually(|| {
-            self.shared.registry.snapshots().iter().find(|s| s.name == name && s.online && !s.busy).map(|s| (**s).clone())
+            self.shared
+                .registry
+                .snapshots()
+                .iter()
+                .find(|s| s.name == name && s.online && !s.busy)
+                .map(|s| (**s).clone())
         })
         .await
         .unwrap_or_else(|| panic!("{name} did not come online"))
@@ -263,11 +268,22 @@ async fn application_profiles_switch_bindings() {
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
     let id = dev.id.clone();
-    let profile = h.shared.command(&id, serde_json::from_value(json!({ "command": "add-profile", "name": "Firefox", "apps": ["firefox"] })).unwrap()).await.unwrap();
+    let profile = h
+        .shared
+        .command(
+            &id,
+            serde_json::from_value(json!({ "command": "add-profile", "name": "Firefox", "apps": ["firefox"] }))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
     let profile = profile.as_str().unwrap().to_string();
-    h.command(&id, json!({ "command": "set-binding", "profile": profile, "control": "back",
-        "action": { "type": "keys", "keys": ["KEY_LEFTCTRL", "KEY_W"] } }))
-        .await;
+    h.command(
+        &id,
+        json!({ "command": "set-binding", "profile": profile, "control": "back",
+        "action": { "type": "keys", "keys": ["KEY_LEFTCTRL", "KEY_W"] } }),
+    )
+    .await;
     // Not focused yet: back is native, not diverted.
     assert_eq!(sim.snapshot(DIRECT).await.unwrap().reporting.get(&BACK).copied().unwrap_or(0), 0);
 
@@ -293,12 +309,26 @@ async fn profile_change_waits_for_release() {
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
     let id = dev.id.clone();
-    let profile = h.shared.command(&id, serde_json::from_value(json!({ "command": "add-profile", "name": "Editor", "apps": ["editor"] })).unwrap()).await.unwrap();
+    let profile = h
+        .shared
+        .command(
+            &id,
+            serde_json::from_value(json!({ "command": "add-profile", "name": "Editor", "apps": ["editor"] })).unwrap(),
+        )
+        .await
+        .unwrap();
     // In the editor the gesture button keeps its native behaviour.
-    h.command(&id, json!({ "command": "set-binding", "profile": profile, "control": "gesture", "action": { "type": "default" } })).await;
-    h.command(&id, json!({ "command": "set-binding", "control": "gesture", "action": {
-        "type": "gestures", "up": { "type": "keys", "keys": ["KEY_F1"] }, "threshold_mm": 5.0 } }))
-        .await;
+    h.command(
+        &id,
+        json!({ "command": "set-binding", "profile": profile, "control": "gesture", "action": { "type": "default" } }),
+    )
+    .await;
+    h.command(
+        &id,
+        json!({ "command": "set-binding", "control": "gesture", "action": {
+        "type": "gestures", "up": { "type": "keys", "keys": ["KEY_F1"] }, "threshold_mm": 5.0 } }),
+    )
+    .await;
     // A gesture switches focus to the "editor" application while the button is held...
     sim.press(DIRECT, &[GESTURE]);
     sim.motion(DIRECT, 0, 0);
@@ -319,7 +349,11 @@ async fn settings_are_applied_and_restored_after_power_cycle() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
-    h.command(&dev.id, json!({ "command": "set-settings", "settings": { "dpi": 1234, "smartshift": false, "invert_scroll": true } })).await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-settings", "settings": { "dpi": 1234, "smartshift": false, "invert_scroll": true } }),
+    )
+    .await;
     let state = sim.snapshot(DIRECT).await.unwrap();
     assert_eq!(state.dpi, 1250, "snapped to the 50 DPI step");
     assert_eq!(state.auto_disengage, 255);
@@ -343,7 +377,11 @@ async fn dpi_cycle_from_a_button() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
-    h.command(&dev.id, json!({ "command": "set-settings", "settings": { "dpi_presets": [800, 1600, 3200], "dpi": 800 } })).await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-settings", "settings": { "dpi_presets": [800, 1600, 3200], "dpi": 800 } }),
+    )
+    .await;
     h.command(&dev.id, json!({ "command": "set-binding", "control": "mode-shift", "action": { "type": "builtin", "id": "dpi-cycle" } })).await;
     for expected in [1600, 3200, 800] {
         sim.press(DIRECT, &[0x00C4]);
@@ -358,7 +396,11 @@ async fn precision_mode_while_held() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
-    h.command(&dev.id, json!({ "command": "set-binding", "control": "forward", "action": { "type": "shift-dpi", "dpi": 400 } })).await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-binding", "control": "forward", "action": { "type": "shift-dpi", "dpi": 400 } }),
+    )
+    .await;
     sim.press(DIRECT, &[0x0056]);
     h.settle().await;
     assert_eq!(sim.snapshot(DIRECT).await.unwrap().dpi, 400);
@@ -396,7 +438,11 @@ async fn stopping_restores_native_behaviour() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
     let dev = h.device("MX Master 3S").await;
-    h.command(&dev.id, json!({ "command": "set-binding", "control": "back", "action": { "type": "builtin", "id": "copy" } })).await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-binding", "control": "back", "action": { "type": "builtin", "id": "copy" } }),
+    )
+    .await;
     h.command(&dev.id, json!({ "command": "set-thumbwheel", "binding": { "type": "scroll", "speed": 1.5 } })).await;
     let mailbox = h.shared.registry.mailbox(&dev.id).unwrap();
     let (tx, rx) = tokio::sync::oneshot::channel();

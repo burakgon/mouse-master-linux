@@ -119,7 +119,12 @@ pub async fn read(dev: &Device) -> Result<DpiInfo> {
             let range = DpiRange::parse(&bytes).ok_or_else(|| Error::Protocol("invalid DPI list".into()))?;
             let cur = dev.call(id::ADJUSTABLE_DPI, 2, &[0]).await?;
             let (current, default) = (cur.u16(1), cur.u16(3));
-            Ok(DpiInfo { feature: id::ADJUSTABLE_DPI, range, current: if current == 0 { default } else { current }, default })
+            Ok(DpiInfo {
+                feature: id::ADJUSTABLE_DPI,
+                range,
+                current: if current == 0 { default } else { current },
+                default,
+            })
         }
         Some(id::EXTENDED_ADJUSTABLE_DPI) => {
             let mut bytes = Vec::new();

@@ -19,7 +19,7 @@ ScrollPage {
             width: parent.width
             spacing: 4
             SectionTitle { text: "Appearance" }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 iconName: "sun"
                 title: "Theme"
@@ -50,7 +50,7 @@ ScrollPage {
             width: parent.width
             spacing: 4
             SectionTitle { text: "Behaviour" }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 iconName: "layers"
                 title: "Application profiles"
@@ -104,7 +104,7 @@ ScrollPage {
                 text: "Service"
                 subtitle: "mouse-masterd runs in the background and applies your settings, even when this window is closed."
             }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 iconName: Daemon.available ? "circle-check" : "circle-alert"
                 divider: System.serviceInstalled
@@ -138,7 +138,7 @@ ScrollPage {
                 text: "Device access"
                 subtitle: "Mouse Master needs permission to talk to Logitech devices and to send input events."
             }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 iconName: System.rulesInstalled && System.deniedDevices === 0 ? "circle-check" : "triangle-alert"
                 title: System.rulesInstalled ? "Device rules installed" : "Device rules missing"
@@ -173,7 +173,7 @@ ScrollPage {
                 text: "Configuration"
                 subtitle: System.configPath()
             }
-            Item { height: 8; width: 1 }
+            Item { Layout.preferredHeight: 8 }
             RowLayout {
                 spacing: 8
                 AppButton {

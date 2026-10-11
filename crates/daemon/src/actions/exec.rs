@@ -2,7 +2,6 @@
 //! desktop operations, commands. Device operations (DPI, SmartShift, host
 //! switching) are handed back to the device that triggered the action.
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use evdev::KeyCode as K;
@@ -34,7 +33,11 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new(input: Option<SharedInput>, conn: Option<zbus::Connection>, desktop: watch::Receiver<Desktop>) -> Executor {
+    pub fn new(
+        input: Option<SharedInput>,
+        conn: Option<zbus::Connection>,
+        desktop: watch::Receiver<Desktop>,
+    ) -> Executor {
         Executor { input, conn, desktop }
     }
 
@@ -184,7 +187,13 @@ impl Executor {
         let Some(conn) = &self.conn else { return };
         let path = format!("/component/{component}");
         let result = conn
-            .call_method(Some("org.kde.kglobalaccel"), path.as_str(), Some("org.kde.kglobalaccel.Component"), "invokeShortcut", &(name,))
+            .call_method(
+                Some("org.kde.kglobalaccel"),
+                path.as_str(),
+                Some("org.kde.kglobalaccel.Component"),
+                "invokeShortcut",
+                &(name,),
+            )
             .await;
         if let Err(e) = result {
             warn!("KDE shortcut {component}/{name} failed: {e}");
@@ -345,5 +354,3 @@ impl Executor {
         }
     }
 }
-
-pub type SharedExecutor = Arc<Executor>;

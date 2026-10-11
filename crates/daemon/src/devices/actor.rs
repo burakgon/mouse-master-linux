@@ -222,11 +222,17 @@ impl Actor {
         let features = dev
             .features()
             .iter()
-            .map(|f| FeatureInfo { id: f.id, name: features::feature_name(f.id), version: f.version, hidden: f.is_hidden() })
+            .map(|f| FeatureInfo {
+                id: f.id,
+                name: features::feature_name(f.id),
+                version: f.version,
+                hidden: f.is_hidden(),
+            })
             .collect();
 
         self.skip_first_motion = dev.feature_version(fid::REPROG_CONTROLS_V4).is_some_and(|v| v >= 5);
-        self.controls = if dev.has(fid::REPROG_CONTROLS_V4) { reprog_controls::controls(&dev).await? } else { Vec::new() };
+        self.controls =
+            if dev.has(fid::REPROG_CONTROLS_V4) { reprog_controls::controls(&dev).await? } else { Vec::new() };
         // Controls the kernel driver diverts and maps itself; touching them would
         // either break them or produce every press twice.
         let kernel_managed = kernel_managed_controls(node.bus, node.product_id);
@@ -259,7 +265,8 @@ impl Actor {
         if dpi::dpi_feature(&dev).is_some() {
             match dpi::read(&dev).await {
                 Ok(d) => {
-                    caps.dpi = Some(DpiCaps { min: d.range.min(), max: d.range.max(), default: d.default, range: d.range });
+                    caps.dpi =
+                        Some(DpiCaps { min: d.range.min(), max: d.range.max(), default: d.default, range: d.range });
                     state.dpi = Some(d.current);
                 }
                 Err(e) => warn!("{name}: cannot read DPI: {e}"),
@@ -282,7 +289,11 @@ impl Actor {
         }
         if dev.has(fid::HIRES_WHEEL) {
             if let (Ok(c), Ok(m)) = (hires_wheel::capability(&dev).await, hires_wheel::mode(&dev).await) {
-                caps.wheel = Some(WheelCaps { invert: c.has_invert, ratchet_switch: c.has_ratchet_switch, multiplier: c.multiplier });
+                caps.wheel = Some(WheelCaps {
+                    invert: c.has_invert,
+                    ratchet_switch: c.has_ratchet_switch,
+                    multiplier: c.multiplier,
+                });
                 state.hires_scroll = Some(m.hires);
                 state.invert_scroll = Some(m.inverted);
                 if c.has_ratchet_switch {
@@ -292,7 +303,11 @@ impl Actor {
         }
         if dev.has(fid::THUMB_WHEEL) {
             if let (Ok(info), Ok(status)) = (thumbwheel::info(&dev).await, thumbwheel::status(&dev).await) {
-                caps.thumbwheel = Some(ThumbwheelCaps { touch: info.has_touch, tap: info.has_single_tap, proximity: info.has_proximity });
+                caps.thumbwheel = Some(ThumbwheelCaps {
+                    touch: info.has_touch,
+                    tap: info.has_single_tap,
+                    proximity: info.has_proximity,
+                });
                 state.thumbwheel_invert = Some(status.inverted);
                 self.thumb_applied = Some((status.diverted, status.inverted));
                 self.thumb_info = Some(info);
@@ -310,7 +325,13 @@ impl Actor {
                 state.hosts = hosts
                     .hosts
                     .iter()
-                    .map(|h| HostEntry { index: h.index, paired: h.paired, bus: h.bus, name: h.name.clone(), current: h.index == hosts.current })
+                    .map(|h| HostEntry {
+                        index: h.index,
+                        paired: h.paired,
+                        bus: h.bus,
+                        name: h.name.clone(),
+                        current: h.index == hosts.current,
+                    })
                     .collect();
             }
         }
@@ -342,7 +363,8 @@ impl Actor {
 
         self.dev = Some(dev);
         let first_time = !self.shared.config.has_device(&id);
-        let gesture_control = self.controls.iter().find(|c| Role::of(c.cid) == Role::Gesture && c.supports_raw_xy()).map(|c| c.cid);
+        let gesture_control =
+            self.controls.iter().find(|c| Role::of(c.cid) == Role::Gesture && c.supports_raw_xy()).map(|c| c.cid);
         let config = self.shared.config.update_device(&id, |c| {
             if c.name != name {
                 c.name = name.clone();
@@ -379,10 +401,13 @@ impl Actor {
         });
         let is_new = self.shared.registry.publish(self.snap.clone().unwrap(), Some(self.mailbox.clone()));
         self.shared.emit(if is_new { DaemonEvent::DevicesChanged } else { DaemonEvent::DeviceChanged(id.clone()) });
-        info!("{name} ({id}) connected via {}", self.connection.receiver.as_deref().unwrap_or(match self.connection.bus {
-            hidpp::hidraw::Bus::Bluetooth => "Bluetooth",
-            _ => "USB",
-        }));
+        info!(
+            "{name} ({id}) connected via {}",
+            self.connection.receiver.as_deref().unwrap_or(match self.connection.bus {
+                hidpp::hidraw::Bus::Bluetooth => "Bluetooth",
+                _ => "USB",
+            })
+        );
 
         self.apply_configuration(&config).await;
         self.check_battery_warning().await;
@@ -526,7 +551,10 @@ impl Actor {
         }
         if (wants("wheel_mode") || wants("smartshift") || wants("smartshift_threshold") || wants("smartshift_torque"))
             && caps.smartshift.is_some()
-            && (s.wheel_mode.is_some() || s.smartshift.is_some() || s.smartshift_threshold.is_some() || s.smartshift_torque.is_some())
+            && (s.wheel_mode.is_some()
+                || s.smartshift.is_some()
+                || s.smartshift_threshold.is_some()
+                || s.smartshift_torque.is_some())
         {
             let mode = s.wheel_mode.map(|m| match m {
                 WheelModeSetting::Ratchet => smartshift::WheelMode::Ratchet,
@@ -538,11 +566,18 @@ impl Actor {
                 (Some(true), None) => {
                     let current = self.snap.as_ref().and_then(|s| s.state.smartshift_threshold);
                     let default = caps.smartshift.as_ref().map(|c| c.default_threshold).unwrap_or(10);
-                    Some(current.filter(|t| *t != smartshift::ALWAYS_RATCHET && *t != 0).unwrap_or(default.clamp(1, SMARTSHIFT_MAX_THRESHOLD)))
+                    Some(
+                        current
+                            .filter(|t| *t != smartshift::ALWAYS_RATCHET && *t != 0)
+                            .unwrap_or(default.clamp(1, SMARTSHIFT_MAX_THRESHOLD)),
+                    )
                 }
                 (None, None) => None,
             };
-            let torque = s.smartshift_torque.filter(|_| caps.smartshift.as_ref().is_some_and(|c| c.torque)).map(|t| t.clamp(1, 100));
+            let torque = s
+                .smartshift_torque
+                .filter(|_| caps.smartshift.as_ref().is_some_and(|c| c.torque))
+                .map(|t| t.clamp(1, 100));
             match smartshift::write(&dev, mode, disengage, torque).await {
                 Ok(()) => {
                     if let Ok(now) = smartshift::read(&dev).await {
@@ -556,7 +591,10 @@ impl Actor {
                 Err(e) => errors.push(format!("SmartShift: {e}")),
             }
         }
-        if (wants("hires_scroll") || wants("invert_scroll")) && caps.wheel.is_some() && (s.hires_scroll.is_some() || s.invert_scroll.is_some()) {
+        if (wants("hires_scroll") || wants("invert_scroll"))
+            && caps.wheel.is_some()
+            && (s.hires_scroll.is_some() || s.invert_scroll.is_some())
+        {
             let current = self.snap.as_ref().map(|s| s.state.clone()).unwrap_or_default();
             let mode = hires_wheel::WheelMode {
                 diverted: false,
@@ -571,7 +609,10 @@ impl Actor {
                 Err(e) => errors.push(format!("Scroll wheel: {e}")),
             }
         }
-        if (wants("haptics") || wants("haptics_level")) && caps.haptics.is_some() && (s.haptics.is_some() || s.haptics_level.is_some()) {
+        if (wants("haptics") || wants("haptics_level"))
+            && caps.haptics.is_some()
+            && (s.haptics.is_some() || s.haptics_level.is_some())
+        {
             let current = self.snap.as_ref().map(|s| s.state.clone()).unwrap_or_default();
             let enabled = s.haptics.or(current.haptics).unwrap_or(true);
             let level = s.haptics_level.or(current.haptics_level).unwrap_or(50);
@@ -679,7 +720,8 @@ impl Actor {
         let controls = self.controls.clone();
         for c in controls.iter().filter(|c| c.is_divertable()) {
             let action = self.binding_for(c.cid);
-            let want = Diversion { divert: action.needs_divert(), raw_xy: action.needs_raw_xy() && c.supports_raw_xy() };
+            let want =
+                Diversion { divert: action.needs_divert(), raw_xy: action.needs_raw_xy() && c.supports_raw_xy() };
             let current = self.applied.get(&c.cid).copied();
             if current == Some(want) {
                 continue;
@@ -763,7 +805,11 @@ impl Actor {
                     debug!("{}: analytics {:02x?}", self.label(), params.as_slice());
                     for (cid, pressed) in events {
                         if self.analytics.contains(&cid) {
-                            self.shared.emit(DaemonEvent::Button { device: self.id(), control: controls::control_key(cid), pressed });
+                            self.shared.emit(DaemonEvent::Button {
+                                device: self.id(),
+                                control: controls::control_key(cid),
+                                pressed,
+                            });
                         }
                     }
                 }
@@ -778,7 +824,11 @@ impl Actor {
                 if let Some(hires_wheel::Event::Ratchet(engaged)) = hires_wheel::decode_event(function, &params) {
                     self.state_mut(|st| {
                         st.ratchet_engaged = Some(engaged);
-                        st.wheel_mode = Some(if engaged { smartshift::WheelMode::Ratchet } else { smartshift::WheelMode::FreeSpin });
+                        st.wheel_mode = Some(if engaged {
+                            smartshift::WheelMode::Ratchet
+                        } else {
+                            smartshift::WheelMode::FreeSpin
+                        });
                     });
                     self.publish();
                 }
@@ -946,8 +996,16 @@ impl Actor {
                 }
                 ThumbOutput::Tap => {
                     if let Some(action) = self.bindings.thumbwheel_tap.clone() {
-                        self.shared.emit(DaemonEvent::Button { device: self.id(), control: "thumbwheel-tap".into(), pressed: true });
-                        self.shared.emit(DaemonEvent::Button { device: self.id(), control: "thumbwheel-tap".into(), pressed: false });
+                        self.shared.emit(DaemonEvent::Button {
+                            device: self.id(),
+                            control: "thumbwheel-tap".into(),
+                            pressed: true,
+                        });
+                        self.shared.emit(DaemonEvent::Button {
+                            device: self.id(),
+                            control: "thumbwheel-tap".into(),
+                            pressed: false,
+                        });
                         if let Some(req) = self.shared.executor.run(&action) {
                             self.device_request(req).await;
                         }
@@ -983,7 +1041,10 @@ impl Actor {
         let mut presets: Vec<u16> = if configured.len() >= 2 {
             configured
         } else {
-            [400u16, 800, 1200, 1600, 2400, 3200, 4000].into_iter().filter(|v| *v >= caps.min && *v <= caps.max).collect()
+            [400u16, 800, 1200, 1600, 2400, 3200, 4000]
+                .into_iter()
+                .filter(|v| *v >= caps.min && *v <= caps.max)
+                .collect()
         };
         presets = presets.into_iter().map(|v| caps.range.snap(v)).collect();
         presets.sort_unstable();
@@ -1049,7 +1110,9 @@ impl Actor {
                 let current = self.snap.as_ref().and_then(|s| s.state.dpi).unwrap_or(presets[0]);
                 let next = match op {
                     DeviceOp::DpiCycle => presets.iter().copied().find(|v| *v > current).unwrap_or(presets[0]),
-                    DeviceOp::DpiUp => presets.iter().copied().find(|v| *v > current).unwrap_or(*presets.last().unwrap()),
+                    DeviceOp::DpiUp => {
+                        presets.iter().copied().find(|v| *v > current).unwrap_or(*presets.last().unwrap())
+                    }
                     _ => presets.iter().rev().copied().find(|v| *v < current).unwrap_or(presets[0]),
                 };
                 self.set_user_dpi(next).await;
@@ -1058,7 +1121,8 @@ impl Actor {
                 if smartshift::smartshift_feature(&dev).is_none() {
                     return;
                 }
-                let current = self.snap.as_ref().and_then(|s| s.state.wheel_mode).unwrap_or(smartshift::WheelMode::Ratchet);
+                let current =
+                    self.snap.as_ref().and_then(|s| s.state.wheel_mode).unwrap_or(smartshift::WheelMode::Ratchet);
                 let next = match current {
                     smartshift::WheelMode::Ratchet => smartshift::WheelMode::FreeSpin,
                     smartshift::WheelMode::FreeSpin => smartshift::WheelMode::Ratchet,
@@ -1071,7 +1135,11 @@ impl Actor {
                 }
             }
             DeviceOp::SmartShiftToggle => {
-                let enabled = self.snap.as_ref().and_then(|s| s.state.smartshift_threshold).is_some_and(|t| t != smartshift::ALWAYS_RATCHET);
+                let enabled = self
+                    .snap
+                    .as_ref()
+                    .and_then(|s| s.state.smartshift_threshold)
+                    .is_some_and(|t| t != smartshift::ALWAYS_RATCHET);
                 let id = self.id();
                 let mut settings = self.shared.config.update_device(&id, |c| {
                     c.settings.smartshift = Some(!enabled);
@@ -1104,7 +1172,9 @@ impl Actor {
                 };
                 let notifier = self.shared.notifier.clone();
                 let summary = format!("{} battery", self.label());
-                tokio::spawn(async move { notifier.notify("battery-info", &summary, &text, "battery", 4000, false).await });
+                tokio::spawn(
+                    async move { notifier.notify("battery-info", &summary, &text, "battery", 4000, false).await },
+                );
             }
             DeviceOp::NextHost => {
                 let (count, current) = self
@@ -1148,7 +1218,9 @@ impl Actor {
             let notifier = self.shared.notifier.clone();
             let summary = format!("{} battery low", self.label());
             let body = format!("{percent}% remaining. Charge it soon.");
-            tokio::spawn(async move { notifier.notify("battery-low", &summary, &body, "battery-caution", 0, true).await });
+            tokio::spawn(
+                async move { notifier.notify("battery-low", &summary, &body, "battery-caution", 0, true).await },
+            );
         }
     }
 
@@ -1173,12 +1245,15 @@ impl Actor {
                     }
                     obj.insert(k.clone(), v.clone());
                 }
-                let mut new: DeviceSettings = serde_json::from_value(merged).map_err(|e| format!("invalid settings: {e}"))?;
+                let mut new: DeviceSettings =
+                    serde_json::from_value(merged).map_err(|e| format!("invalid settings: {e}"))?;
                 self.sanitize(&mut new);
                 self.shared.config.update_device(&id, |c| c.settings = new.clone());
                 let mut keys = keys;
                 if keys.iter().any(|k| k.starts_with("smartshift") || k == "wheel_mode") {
-                    keys.extend(["wheel_mode", "smartshift", "smartshift_threshold", "smartshift_torque"].map(String::from));
+                    keys.extend(
+                        ["wheel_mode", "smartshift", "smartshift_threshold", "smartshift_torque"].map(String::from),
+                    );
                 }
                 let errors = self.apply_settings(&new, Some(&keys)).await;
                 if keys.iter().any(|k| k == "thumbwheel_invert") {
@@ -1189,7 +1264,8 @@ impl Actor {
             }
             Command::SetBinding { profile, control, action } => {
                 if let Some(Action::Gestures(_)) = &action {
-                    let ok = self.controls.iter().any(|c| controls::control_key(c.cid) == control && c.supports_raw_xy());
+                    let ok =
+                        self.controls.iter().any(|c| controls::control_key(c.cid) == control && c.supports_raw_xy());
                     if !ok {
                         return Err("this control cannot do gestures".into());
                     }
@@ -1223,7 +1299,10 @@ impl Actor {
             Command::AddProfile { name, apps } => {
                 let pid = format!(
                     "p{:x}",
-                    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0)
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_millis())
+                        .unwrap_or(0)
                 );
                 let profile = AppProfile { id: pid.clone(), name, apps, ..Default::default() };
                 self.shared.config.update_device(&id, |c| c.profiles.push(profile));
@@ -1270,7 +1349,13 @@ impl Actor {
                         st.hosts = hosts
                             .hosts
                             .iter()
-                            .map(|h| HostEntry { index: h.index, paired: h.paired, bus: h.bus, name: h.name.clone(), current: h.index == hosts.current })
+                            .map(|h| HostEntry {
+                                index: h.index,
+                                paired: h.paired,
+                                bus: h.bus,
+                                name: h.name.clone(),
+                                current: h.index == hosts.current,
+                            })
                             .collect();
                     });
                 }
@@ -1325,7 +1410,9 @@ impl Actor {
         }
         for (cid, d) in self.applied.clone() {
             if d.divert || d.raw_xy {
-                let _ = reprog_controls::set_reporting(&dev, cid, reprog_controls::ReportingChange::divert(false, false)).await;
+                let _ =
+                    reprog_controls::set_reporting(&dev, cid, reprog_controls::ReportingChange::divert(false, false))
+                        .await;
             }
         }
         if let Some((true, _)) = self.thumb_applied {

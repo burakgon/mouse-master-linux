@@ -188,9 +188,8 @@ pub fn desktop_exec(path: &std::path::Path) -> Option<String> {
                 let mut chars = exec.chars().peekable();
                 while let Some(c) = chars.next() {
                     if c == '%' {
-                        match chars.next() {
-                            Some('%') => out.push('%'),
-                            _ => {}
+                        if chars.next() == Some('%') {
+                            out.push('%');
                         }
                     } else {
                         out.push(c);
@@ -239,7 +238,8 @@ mod tests {
     fn exec_field_codes() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().join("x.desktop");
-        std::fs::write(&p, "[Desktop Entry]\nName=X\nExec=foo --bar %U 100%%\n[Desktop Action new]\nExec=other\n").unwrap();
+        std::fs::write(&p, "[Desktop Entry]\nName=X\nExec=foo --bar %U 100%%\n[Desktop Action new]\nExec=other\n")
+            .unwrap();
         assert_eq!(desktop_exec(&p).unwrap(), "foo --bar  100%");
     }
 }

@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest something Mouse Master should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe what you want to do. If Options+ does it, how does it work there?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: How would you use it?

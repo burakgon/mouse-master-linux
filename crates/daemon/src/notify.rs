@@ -58,7 +58,13 @@ impl Notifier {
         let Some(conn) = &self.conn else { return };
         if *self.desktop.borrow() == Desktop::Kde {
             let ok = conn
-                .call_method(Some("org.kde.plasmashell"), "/org/kde/osdService", Some("org.kde.osdService"), "showText", &(icon, text))
+                .call_method(
+                    Some("org.kde.plasmashell"),
+                    "/org/kde/osdService",
+                    Some("org.kde.osdService"),
+                    "showText",
+                    &(icon, text),
+                )
                 .await
                 .is_ok();
             if ok {

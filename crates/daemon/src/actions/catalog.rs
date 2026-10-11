@@ -109,7 +109,10 @@ pub enum Impl {
     Click(MouseButton),
     DoubleClick,
     /// Scroll by high resolution units (120 per notch).
-    Scroll { vertical: i32, horizontal: i32 },
+    Scroll {
+        vertical: i32,
+        horizontal: i32,
+    },
     /// Ctrl + scroll wheel, the most widely supported zoom gesture.
     ZoomWheel(i32),
     Desktop(DesktopOp),
@@ -172,7 +175,13 @@ pub static BUILTINS: &[Builtin] = &[
     b!("close-tab", "Close tab", Browser, "square-x", Keys(&[K::KEY_LEFTCTRL, K::KEY_W])),
     b!("reopen-tab", "Reopen closed tab", Browser, "rotate-ccw", Keys(&[K::KEY_LEFTCTRL, K::KEY_LEFTSHIFT, K::KEY_T])),
     b!("next-tab", "Next tab", Browser, "arrow-right-to-line", Keys(&[K::KEY_LEFTCTRL, K::KEY_TAB])),
-    b!("previous-tab", "Previous tab", Browser, "arrow-left-to-line", Keys(&[K::KEY_LEFTCTRL, K::KEY_LEFTSHIFT, K::KEY_TAB])),
+    b!(
+        "previous-tab",
+        "Previous tab",
+        Browser,
+        "arrow-left-to-line",
+        Keys(&[K::KEY_LEFTCTRL, K::KEY_LEFTSHIFT, K::KEY_TAB])
+    ),
     b!("refresh", "Refresh", Browser, "refresh-cw", Keys(&[K::KEY_F5])),
     b!("fullscreen", "Full screen", Browser, "maximize", Keys(&[K::KEY_F11])),
     // Zoom
@@ -192,7 +201,13 @@ pub static BUILTINS: &[Builtin] = &[
     b!("overview", "Overview", Desktop, "layout-grid", Desktop(DesktopOp::Overview)),
     b!("show-desktop", "Show desktop", Desktop, "monitor", Desktop(DesktopOp::ShowDesktop)),
     b!("present-windows", "Present windows", Desktop, "layout-dashboard", Desktop(DesktopOp::PresentWindows)),
-    b!("present-all-windows", "Present all windows", Desktop, "layout-dashboard", Desktop(DesktopOp::PresentAllWindows)),
+    b!(
+        "present-all-windows",
+        "Present all windows",
+        Desktop,
+        "layout-dashboard",
+        Desktop(DesktopOp::PresentAllWindows)
+    ),
     b!("desktop-grid", "Desktop grid", Desktop, "grid-2x2", Desktop(DesktopOp::DesktopGrid)),
     b!("workspace-left", "Previous desktop", Desktop, "arrow-big-left", Desktop(DesktopOp::WorkspaceLeft)),
     b!("workspace-right", "Next desktop", Desktop, "arrow-big-right", Desktop(DesktopOp::WorkspaceRight)),
@@ -212,8 +227,20 @@ pub static BUILTINS: &[Builtin] = &[
     b!("tile-left", "Tile window left", Window, "panel-left", Desktop(DesktopOp::TileLeft)),
     b!("tile-right", "Tile window right", Window, "panel-right", Desktop(DesktopOp::TileRight)),
     b!("toggle-floating", "Toggle floating", Window, "picture-in-picture-2", Desktop(DesktopOp::ToggleFloating)),
-    b!("window-next-desktop", "Move window to next desktop", Window, "arrow-right-from-line", Desktop(DesktopOp::WindowToNextWorkspace)),
-    b!("window-previous-desktop", "Move window to previous desktop", Window, "arrow-left-from-line", Desktop(DesktopOp::WindowToPreviousWorkspace)),
+    b!(
+        "window-next-desktop",
+        "Move window to next desktop",
+        Window,
+        "arrow-right-from-line",
+        Desktop(DesktopOp::WindowToNextWorkspace)
+    ),
+    b!(
+        "window-previous-desktop",
+        "Move window to previous desktop",
+        Window,
+        "arrow-left-from-line",
+        Desktop(DesktopOp::WindowToPreviousWorkspace)
+    ),
     // System
     b!("brightness-up", "Brightness up", System, "sun", Keys(&[K::KEY_BRIGHTNESSUP])),
     b!("brightness-down", "Brightness down", System, "sun-dim", Keys(&[K::KEY_BRIGHTNESSDOWN])),
@@ -231,7 +258,13 @@ pub static BUILTINS: &[Builtin] = &[
     b!("dpi-down", "Pointer speed down", Device, "gauge", Device(DeviceOp::DpiDown)),
     b!("wheel-mode-toggle", "Toggle ratchet / free spin", Device, "disc-3", Device(DeviceOp::WheelModeToggle)),
     b!("smartshift-toggle", "Toggle SmartShift", Device, "disc-3", Device(DeviceOp::SmartShiftToggle)),
-    b!("invert-scroll-toggle", "Toggle scroll direction", Device, "arrow-down-up", Device(DeviceOp::InvertScrollToggle)),
+    b!(
+        "invert-scroll-toggle",
+        "Toggle scroll direction",
+        Device,
+        "arrow-down-up",
+        Device(DeviceOp::InvertScrollToggle)
+    ),
     b!("show-battery", "Show battery level", Device, "battery-medium", Device(DeviceOp::ShowBattery)),
     b!("next-host", "Switch to next computer", Device, "monitor-smartphone", Device(DeviceOp::NextHost)),
 ];
@@ -325,7 +358,13 @@ pub fn catalog(desktop: Desktop) -> Catalog {
         categories: Category::ALL.iter().map(|c| CatalogCategory { id: *c, label: c.label() }).collect(),
         actions: BUILTINS
             .iter()
-            .map(|b| CatalogEntry { id: b.id, label: b.label, category: b.category, icon: b.icon, available: available(b, desktop) })
+            .map(|b| CatalogEntry {
+                id: b.id,
+                label: b.label,
+                category: b.category,
+                icon: b.icon,
+                available: available(b, desktop),
+            })
             .collect(),
     }
 }

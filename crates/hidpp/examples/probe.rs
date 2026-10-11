@@ -18,12 +18,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("No Logitech HID++ devices found (check permissions of /dev/hidraw*).");
     }
     for node in nodes {
-        println!("== {} {:04x}:{:04x} {:?} \"{}\" reports={:?}", node.devnode.display(), node.vendor_id, node.product_id, node.bus, node.name, node.reports);
+        println!(
+            "== {} {:04x}:{:04x} {:?} \"{}\" reports={:?}",
+            node.devnode.display(),
+            node.vendor_id,
+            node.product_id,
+            node.bus,
+            node.name,
+            node.reports
+        );
         let model = receiver::receiver_model(node.vendor_id, node.product_id);
         let (channel, _events) = Channel::open(node)?;
         if let Some(model) = model {
             let rx = Receiver::new(channel.clone(), model);
-            println!("   receiver: {} serial={:?} connected={:?}", model.name, rx.serial().await, rx.connected_devices().await);
+            println!(
+                "   receiver: {} serial={:?} connected={:?}",
+                model.name,
+                rx.serial().await,
+                rx.connected_devices().await
+            );
             for slot in 1..=model.max_devices {
                 match rx.paired_device(slot).await {
                     Ok(p) => {
@@ -67,7 +80,14 @@ async fn dump(channel: &Channel, index: u8) {
     }
     println!("   features:");
     for f in dev.features().iter() {
-        println!("     [{:2}] {:#06x} v{} {}{}", f.index, f.id, f.version, features::feature_name(f.id), if f.is_hidden() { " (hidden)" } else { "" });
+        println!(
+            "     [{:2}] {:#06x} v{} {}{}",
+            f.index,
+            f.id,
+            f.version,
+            features::feature_name(f.id),
+            if f.is_hidden() { " (hidden)" } else { "" }
+        );
     }
     println!("   battery: {:?}", battery::read(&dev).await);
     if dpi::dpi_feature(&dev).is_some() {
@@ -77,7 +97,12 @@ async fn dump(channel: &Channel, index: u8) {
         println!("   smartshift: {:?}", smartshift::read(&dev).await);
     }
     if dev.has(features::id::HIRES_WHEEL) {
-        println!("   wheel: {:?} {:?} ratchet={:?}", hires_wheel::capability(&dev).await, hires_wheel::mode(&dev).await, hires_wheel::ratchet_engaged(&dev).await);
+        println!(
+            "   wheel: {:?} {:?} ratchet={:?}",
+            hires_wheel::capability(&dev).await,
+            hires_wheel::mode(&dev).await,
+            hires_wheel::ratchet_engaged(&dev).await
+        );
     }
     if dev.has(features::id::THUMB_WHEEL) {
         println!("   thumbwheel: {:?} {:?}", thumbwheel::info(&dev).await, thumbwheel::status(&dev).await);

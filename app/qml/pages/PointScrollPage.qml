@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -128,7 +129,7 @@ ScrollPage {
                 text: "Scroll wheel"
                 subtitle: "SmartShift switches the wheel from ratchet to free spin when you scroll fast."
             }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 visible: !!page.caps.smartshift
                 iconName: "disc-3"
@@ -214,7 +215,7 @@ ScrollPage {
                 text: "Thumb wheel"
                 subtitle: "Choose what it does on the Buttons page — scrolling, zoom, volume, tabs and more."
             }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 iconName: "arrow-down-up"
                 title: "Invert direction"
@@ -235,7 +236,7 @@ ScrollPage {
             width: parent.width
             spacing: 4
             SectionTitle { text: "Performance" }
-            Item { height: 6; width: 1 }
+            Item { Layout.preferredHeight: 6 }
             SettingRow {
                 visible: (page.caps.report_rates_us || []).length > 1
                 iconName: "zap"

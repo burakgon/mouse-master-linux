@@ -20,7 +20,6 @@ use crate::window::ActiveApp;
 
 pub const BUS_NAME: &str = "io.github.burakgon.MouseMaster.Daemon";
 pub const OBJECT_PATH: &str = "/io/github/burakgon/MouseMaster/Daemon";
-pub const INTERFACE: &str = "io.github.burakgon.MouseMaster.Daemon1";
 pub const TRACKER_INTERFACE: &str = "io.github.burakgon.MouseMaster.WindowTracker1";
 
 pub struct DaemonIface {

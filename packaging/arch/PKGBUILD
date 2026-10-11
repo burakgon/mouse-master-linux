@@ -1,0 +1,52 @@
+# Maintainer: Burak Gon <burakgon12 at gmail dot com>
+pkgname=mouse-master-git
+_name=mouse-master
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Configure Logitech mice on Linux: buttons, gestures, scrolling and per-app profiles (Wayland and X11)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/burakgon/mouse-master"
+license=('GPL-3.0-or-later')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'systemd-libs' 'gcc-libs' 'glibc' 'hicolor-icon-theme')
+makedepends=('git' 'cargo' 'cmake')
+optdepends=('qt6-wayland: native Wayland window for the app'
+            'polkit: install device permissions from the app')
+provides=("$_name")
+conflicts=("$_name")
+install=mouse-master.install
+source=("git+$url.git")
+sha256sums=('SKIP')
+options=('!lto')
+
+pkgver() {
+    cd "$_name"
+    printf "%s.r%s.g%s" "$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" \
+        "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "$_name"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
+    cmake -S "$_name" -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DUDEV_RULES_DIR=/usr/lib/udev/rules.d \
+        -DSYSTEMD_USER_UNIT_DIR=/usr/lib/systemd/user
+    cmake --build build
+}
+
+check() {
+    cd "$_name"
+    export RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true
+    cargo test --frozen --workspace
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+    install -Dm644 "$_name/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

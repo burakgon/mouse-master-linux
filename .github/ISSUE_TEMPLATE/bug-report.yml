@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem!
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and connection
+      placeholder: "MX Master 3S over Bluetooth / via Bolt receiver"
+    validations:
+      required: true
+  - type: dropdown
+    id: desktop
+    attributes:
+      label: Desktop
+      options: [KDE Plasma, Hyprland, Sway, GNOME, Other Wayland compositor, X11]
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and kernel
+      placeholder: "Arch Linux, 6.17.3"
+  - type: textarea
+    id: info
+    attributes:
+      label: Device information
+      description: Output of `mouse-masterctl info`
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `journalctl --user -u mouse-master -b --no-pager | tail -n 100`
+      render: text

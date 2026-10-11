@@ -25,7 +25,6 @@ pub trait InputSink: Send + Sync {
     /// Scrolls by high resolution units (120 per notch). Positive vertical
     /// values scroll up, positive horizontal values scroll right.
     fn scroll(&self, vertical: i32, horizontal: i32);
-    fn motion(&self, dx: i32, dy: i32);
     /// Resets partial scroll accumulation (at the end of a gesture).
     fn reset_scroll(&self) {}
     /// Releases everything still held (on shutdown or device disconnect).
@@ -215,10 +214,6 @@ impl InputSink for VirtualInput {
         p.h_acc = 0;
     }
 
-    fn motion(&self, dx: i32, dy: i32) {
-        self.emit_pointer(&[rel_event(RelativeAxisCode::REL_X, dx), rel_event(RelativeAxisCode::REL_Y, dy)]);
-    }
-
     /// Releases everything still held (on shutdown or device disconnect).
     fn release_all(&self) {
         let held: Vec<KeyCode> = std::mem::take(&mut *self.held.lock());
@@ -247,7 +242,6 @@ pub struct RecordingInput {
 pub enum Recorded {
     Key(KeyCode, bool),
     Scroll(i32, i32),
-    Motion(i32, i32),
 }
 
 #[cfg(test)]
@@ -264,9 +258,6 @@ impl InputSink for RecordingInput {
     }
     fn scroll(&self, vertical: i32, horizontal: i32) {
         self.events.lock().push(Recorded::Scroll(vertical, horizontal));
-    }
-    fn motion(&self, dx: i32, dy: i32) {
-        self.events.lock().push(Recorded::Motion(dx, dy));
     }
     fn release_all(&self) {}
 }

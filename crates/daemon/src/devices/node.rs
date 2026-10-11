@@ -30,13 +30,14 @@ fn interesting(info: &NodeInfo) -> bool {
 /// Watches udev for hidraw nodes on a dedicated thread (libudev is not thread safe).
 fn spawn_udev_monitor(tx: mpsc::UnboundedSender<NodeEvent>) {
     let result = std::thread::Builder::new().name("udev-monitor".into()).spawn(move || {
-        let socket = match udev::MonitorBuilder::new().and_then(|b| b.match_subsystem("hidraw")).and_then(|b| b.listen()) {
-            Ok(s) => s,
-            Err(e) => {
-                warn!("cannot monitor udev, hotplug disabled: {e}");
-                return;
-            }
-        };
+        let socket =
+            match udev::MonitorBuilder::new().and_then(|b| b.match_subsystem("hidraw")).and_then(|b| b.listen()) {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("cannot monitor udev, hotplug disabled: {e}");
+                    return;
+                }
+            };
         let fd = socket.as_raw_fd();
         loop {
             let mut pfd = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
@@ -136,7 +137,14 @@ async fn open_with_retry(info: &NodeInfo) -> Option<(Channel, hidpp::EventReceiv
 }
 
 async fn run_node(shared: Arc<Shared>, info: NodeInfo) {
-    info!("node {} {:04x}:{:04x} {:?} \"{}\"", info.devnode.display(), info.vendor_id, info.product_id, info.bus, info.name);
+    info!(
+        "node {} {:04x}:{:04x} {:?} \"{}\"",
+        info.devnode.display(),
+        info.vendor_id,
+        info.product_id,
+        info.bus,
+        info.name
+    );
     let Some((channel, mut events)) = open_with_retry(&info).await else { return };
     match receiver::receiver_model(info.vendor_id, info.product_id) {
         Some(model) => run_receiver(shared, channel, &mut events, model).await,

@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 
@@ -20,7 +21,7 @@ ScrollPage {
         Label {
             text: parent.value
             Layout.fillWidth: true
-            font.family: parent.copyable ? "monospace" : Qt.application.font.family
+            font.family: parent.copyable ? "monospace" : Theme.fontFamily
             elide: Text.ElideMiddle
         }
         IconButton {
@@ -116,20 +117,21 @@ ScrollPage {
                 Repeater {
                     model: page.device ? page.device.features : []
                     delegate: RowLayout {
+                        id: featureRow
                         required property var modelData
                         Layout.fillWidth: true
                         spacing: 10
                         Label {
-                            text: "0x" + ("0000" + modelData.id.toString(16)).slice(-4)
+                            text: "0x" + ("0000" + featureRow.modelData.id.toString(16)).slice(-4)
                             font.family: "monospace"
                             tertiary: true
                             size: Theme.fontSmall
                         }
                         Label {
-                            text: modelData.name + (modelData.version ? " v" + modelData.version : "")
+                            text: featureRow.modelData.name + (featureRow.modelData.version ? " v" + featureRow.modelData.version : "")
                             Layout.fillWidth: true
                             size: Theme.fontSmall
-                            secondary: modelData.hidden
+                            secondary: featureRow.modelData.hidden
                         }
                     }
                 }

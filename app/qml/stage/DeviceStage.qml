@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
@@ -200,6 +201,7 @@ Item {
     Repeater {
         model: stage.items
         delegate: Callout {
+            id: callout
             required property var modelData
             readonly property bool onLeft: modelData.spot.side === "left"
             readonly property var binding: stage.bindings[modelData.key] || { action: { type: "default" }, inherited: false }
@@ -217,7 +219,7 @@ Item {
             active: !!stage.pressed[modelData.key]
             onClicked: stage.controlClicked(modelData.key)
             HoverHandler {
-                onHoveredChanged: stage.hovered = hovered ? modelData.key : (stage.hovered === modelData.key ? "" : stage.hovered)
+                onHoveredChanged: stage.hovered = hovered ? callout.modelData.key : (stage.hovered === callout.modelData.key ? "" : stage.hovered)
             }
             Behavior on x { NumberAnimation { duration: Theme.anim; easing.type: Easing.OutCubic } }
             Behavior on y { NumberAnimation { duration: Theme.anim; easing.type: Easing.OutCubic } }

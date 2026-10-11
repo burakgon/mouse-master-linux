@@ -10,11 +10,15 @@ QtObject {
     property int mode: 0
     property bool useSystemAccent: true
 
+    // qmllint disable missing-property
     readonly property bool systemDark: Qt.styleHints.colorScheme === Qt.ColorScheme.Dark
         || (Qt.styleHints.colorScheme === Qt.ColorScheme.Unknown && _palette.window.hslLightness < 0.5)
+    // qmllint enable missing-property
     readonly property bool dark: mode === 2 || (mode === 0 && systemDark)
 
     readonly property SystemPalette _palette: SystemPalette { colorGroup: SystemPalette.Active }
+    readonly property FontMetrics _metrics: FontMetrics {}
+    readonly property string fontFamily: _metrics.font.family
 
     // A system accent that is too grey or too dark/light is replaced by ours.
     readonly property color brand: "#5b7cff"

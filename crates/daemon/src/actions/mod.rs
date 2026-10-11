@@ -48,11 +48,6 @@ impl Action {
     pub fn needs_raw_xy(&self) -> bool {
         matches!(self, Action::Gestures(_))
     }
-
-    /// Actions whose effect lasts while the control is held.
-    pub fn is_hold(&self) -> bool {
-        matches!(self, Action::Keys { .. } | Action::Mouse { .. } | Action::ShiftDpi { .. })
-    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -201,6 +196,6 @@ mod tests {
             other => panic!("unexpected {other:?}"),
         }
         let k: Action = serde_json::from_str(r#"{"type":"keys","keys":["KEY_LEFTCTRL","KEY_C"]}"#).unwrap();
-        assert!(k.is_hold());
+        assert!(k.needs_divert() && !k.needs_raw_xy());
     }
 }

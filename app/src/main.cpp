@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
         if (qEnvironmentVariableIsSet("MM_PAGE")) {
             root->setProperty("currentPage", qEnvironmentVariable("MM_PAGE"));
         }
+        if (qEnvironmentVariableIsSet("MM_DEVICE")) {
+            root->setProperty("devDevice", qEnvironmentVariable("MM_DEVICE"));
+        }
         if (qEnvironmentVariableIsSet("MM_THEME")) {
             root->setProperty("devTheme", qEnvironmentVariable("MM_THEME"));
         }

@@ -120,8 +120,7 @@ pub struct NodeInfo {
 
 impl NodeInfo {
     pub fn is_logitech(&self) -> bool {
-        self.vendor_id == LOGITECH_VENDOR_ID
-            || (self.vendor_id == LENOVO_VENDOR_ID && self.product_id == 0x6042)
+        self.vendor_id == LOGITECH_VENDOR_ID || (self.vendor_id == LENOVO_VENDOR_ID && self.product_id == 0x6042)
     }
 
     /// Reads node information for a hidraw device from udev.
@@ -130,20 +129,9 @@ impl NodeInfo {
         let hid = dev.parent_with_subsystem("hid").ok()??;
         let hid_id = hid.property_value("HID_ID")?.to_str()?;
         let (bus, vendor_id, product_id) = parse_hid_id(hid_id)?;
-        let name = hid
-            .property_value("HID_NAME")
-            .and_then(|v| v.to_str())
-            .unwrap_or_default()
-            .to_string();
-        let uniq = hid
-            .property_value("HID_UNIQ")
-            .and_then(|v| v.to_str())
-            .unwrap_or_default()
-            .to_string();
-        let is_dj_child = hid
-            .parent()
-            .and_then(|p| p.subsystem().map(|s| s == "hid"))
-            .unwrap_or(false);
+        let name = hid.property_value("HID_NAME").and_then(|v| v.to_str()).unwrap_or_default().to_string();
+        let uniq = hid.property_value("HID_UNIQ").and_then(|v| v.to_str()).unwrap_or_default().to_string();
+        let is_dj_child = hid.parent().and_then(|p| p.subsystem().map(|s| s == "hid")).unwrap_or(false);
         let descriptor = std::fs::read(hid.syspath().join("report_descriptor")).unwrap_or_default();
         Some(NodeInfo {
             devnode,
@@ -192,11 +180,8 @@ pub struct Hidraw {
 
 impl Hidraw {
     pub fn open(path: &Path) -> io::Result<Hidraw> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .custom_flags(libc::O_NONBLOCK | libc::O_CLOEXEC)
-            .open(path)?;
+        let file =
+            OpenOptions::new().read(true).write(true).custom_flags(libc::O_NONBLOCK | libc::O_CLOEXEC).open(path)?;
         Ok(Hidraw { fd: AsyncFd::new(file)?, path: path.to_path_buf() })
     }
 

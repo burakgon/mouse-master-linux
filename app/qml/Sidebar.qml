@@ -1,6 +1,8 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
+import "Layouts.js" as Layouts
 
 Rectangle {
     id: root
@@ -113,13 +115,26 @@ Rectangle {
                     anchors.rightMargin: 12
                     spacing: 10
                     Rectangle {
-                        width: 40
-                        height: 40
+                        Layout.preferredWidth: 40
+                        Layout.preferredHeight: 40
                         radius: 12
                         color: card.current ? Theme.accentAlpha(Theme.dark ? 0.2 : 0.14) : Theme.surfaceAlt
+                        // A miniature of the device artwork.
+                        Image {
+                            anchors.centerIn: parent
+                            visible: card.modelData.kind !== "keyboard"
+                            source: Layouts.forDevice(card.modelData).art
+                            height: 34
+                            width: height * Layouts.forDevice(card.modelData).width / Layouts.forDevice(card.modelData).height
+                            sourceSize: Qt.size(width * 3, height * 3)
+                            smooth: true
+                            mipmap: true
+                            opacity: card.modelData.online ? 1 : 0.5
+                        }
                         Icon {
                             anchors.centerIn: parent
-                            name: card.modelData.kind === "keyboard" ? "keyboard" : "mouse"
+                            visible: card.modelData.kind === "keyboard"
+                            name: "keyboard"
                             size: 20
                             color: card.current ? Theme.accent : Theme.textSecondary
                         }
@@ -161,7 +176,7 @@ Rectangle {
             }
         }
 
-        Item { height: 10; width: 1; visible: root.device !== undefined && root.device.id !== undefined }
+        Item { Layout.preferredHeight: 10; visible: !!root.device && root.device.id !== undefined }
 
         ColumnLayout {
             visible: !!root.device && !!root.device.id

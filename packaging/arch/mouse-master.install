@@ -1,0 +1,18 @@
+post_install() {
+    udevadm control --reload 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=misc --sysname-match=uinput 2>/dev/null || true
+    echo ">>> Start Mouse Master for your user with:"
+    echo ">>>   systemctl --user enable --now mouse-master.service"
+    echo ">>> then open \"Mouse Master\" from your application menu."
+}
+
+post_upgrade() {
+    udevadm control --reload 2>/dev/null || true
+    echo ">>> Restart the service to use the new version:"
+    echo ">>>   systemctl --user restart mouse-master.service"
+}
+
+post_remove() {
+    udevadm control --reload 2>/dev/null || true
+}

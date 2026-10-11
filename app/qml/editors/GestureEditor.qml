@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as C
 import QtQuick.Layouts
@@ -23,26 +24,6 @@ ColumnLayout {
         root.changed(g)
     }
 
-    // Presets
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 8
-        Label { text: "Presets"; strong: true; size: Theme.fontSmall }
-        Flow {
-            Layout.fillWidth: true
-            spacing: 6
-            Repeater {
-                model: Actions.gesturePresets
-                delegate: Chip {
-                    required property var modelData
-                    text: modelData.label
-                    iconName: modelData.icon
-                    onClicked: root.changed(Actions.gestureFromPreset(modelData, root.gestures))
-                }
-            }
-        }
-    }
-
     Segmented {
         Layout.fillWidth: true
         options: [{ value: "directional", label: "Directions", icon: "move" }, { value: "pan", label: "Pan & scroll", icon: "hand-grab" }]
@@ -55,7 +36,10 @@ ColumnLayout {
         id: pad
         visible: !root.pan
         Layout.fillWidth: true
-        Layout.preferredHeight: 300
+        Layout.preferredHeight: Math.min(cell, 64) * 3 + gap * 2 + (cell - Math.min(cell, 64)) * 0
+        readonly property real gap: 8
+        readonly property real cell: Math.min(104, (width - gap * 2) / 3)
+        readonly property real gridX: (width - (cell * 3 + gap * 2)) / 2
         property var trail: []
         property string flash: ""
 
@@ -94,13 +78,13 @@ ColumnLayout {
         Rectangle {
             id: padBg
             anchors.centerIn: parent
-            width: Math.min(parent.width, 300)
-            height: 300
-            radius: 150
+            width: Math.min(pad.width, pad.height * 1.05)
+            height: width
+            radius: width / 2
             color: Theme.surfaceAlt
             border.width: 1
             border.color: Theme.stroke
-            // Live trail
+            // Live trail of the mouse while the gesture button is held.
             Shape {
                 anchors.fill: parent
                 visible: pad.trail.length > 1
@@ -115,9 +99,10 @@ ColumnLayout {
                         path: {
                             var pts = []
                             var scale = 0.18
+                            var r = padBg.width / 2 - 6
                             for (var i = 0; i < pad.trail.length; ++i)
-                                pts.push(Qt.point(padBg.width / 2 + Math.max(-140, Math.min(140, pad.trail[i].x * scale)),
-                                                  padBg.height / 2 + Math.max(-140, Math.min(140, pad.trail[i].y * scale))))
+                                pts.push(Qt.point(padBg.width / 2 + Math.max(-r, Math.min(r, pad.trail[i].x * scale)),
+                                                  padBg.height / 2 + Math.max(-r, Math.min(r, pad.trail[i].y * scale))))
                             return pts
                         }
                     }
@@ -129,10 +114,14 @@ ColumnLayout {
             id: slot
             property string direction
             property string iconName
+            property int column
+            property int row
             readonly property var info: Actions.describe(root.gestures ? root.gestures[direction] : null, root.catalog, "")
             readonly property bool lit: pad.flash === direction
-            width: 128
-            height: 64
+            x: pad.gridX + column * (pad.cell + pad.gap)
+            y: row * (height + pad.gap)
+            width: pad.cell
+            height: Math.min(pad.cell, 64)
             radius: 14
             color: lit ? Theme.accent : slotHover.hovered ? Theme.surfaceHover : Theme.surface
             border.width: 1
@@ -145,14 +134,14 @@ ColumnLayout {
                 onTapped: {
                     picker.direction = slot.direction
                     picker.action = root.gestures[slot.direction] || { type: "none" }
-                    picker.heading = "When you move " + (slot.direction === "click" ? "— just click" : slot.direction)
+                    picker.heading = slot.direction === "click" ? "When you click without moving" : "When you move " + slot.direction
                     picker.open()
                 }
             }
             Column {
                 anchors.centerIn: parent
-                width: parent.width - 16
-                spacing: 3
+                width: parent.width - 12
+                spacing: 4
                 Icon {
                     anchors.horizontalCenter: parent.horizontalCenter
                     name: slot.iconName
@@ -166,16 +155,18 @@ ColumnLayout {
                     color: slot.lit ? Theme.accentText : Theme.text
                     font.pixelSize: Theme.fontSmall
                     font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 2
                     elide: Text.ElideRight
                 }
             }
         }
 
-        Slot { direction: "up"; iconName: "arrow-big-up"; anchors.horizontalCenter: parent.horizontalCenter; y: 0 }
-        Slot { direction: "down"; iconName: "arrow-big-down"; anchors.horizontalCenter: parent.horizontalCenter; y: parent.height - height }
-        Slot { direction: "left"; iconName: "arrow-big-left"; x: padBg.x - 34; anchors.verticalCenter: parent.verticalCenter }
-        Slot { direction: "right"; iconName: "arrow-big-right"; x: padBg.x + padBg.width - width + 34; anchors.verticalCenter: parent.verticalCenter }
-        Slot { direction: "click"; iconName: "mouse-pointer-click"; anchors.centerIn: parent; width: 108 }
+        Slot { direction: "up"; iconName: "arrow-big-up"; column: 1; row: 0 }
+        Slot { direction: "left"; iconName: "arrow-big-left"; column: 0; row: 1 }
+        Slot { direction: "click"; iconName: "mouse-pointer-click"; column: 1; row: 1 }
+        Slot { direction: "right"; iconName: "arrow-big-right"; column: 2; row: 1 }
+        Slot { direction: "down"; iconName: "arrow-big-down"; column: 1; row: 2 }
     }
 
     Label {
@@ -186,6 +177,26 @@ ColumnLayout {
         tertiary: true
         size: Theme.fontCaption
         wrapMode: Text.WordWrap
+    }
+
+    // Presets
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: 8
+        Label { text: "Start from a preset"; strong: true; size: Theme.fontSmall }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: Actions.gesturePresets
+                delegate: Chip {
+                    required property var modelData
+                    text: modelData.label
+                    iconName: modelData.icon
+                    onClicked: root.changed(Actions.gestureFromPreset(modelData, root.gestures))
+                }
+            }
+        }
     }
 
     // Pan mode

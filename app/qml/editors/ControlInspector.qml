@@ -79,8 +79,8 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
             Rectangle {
-                width: 40
-                height: 40
+                Layout.preferredWidth: 40
+                Layout.preferredHeight: 40
                 radius: 12
                 color: Theme.accentAlpha(Theme.dark ? 0.18 : 0.12)
                 Icon {

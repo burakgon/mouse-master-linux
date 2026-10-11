@@ -41,20 +41,6 @@ pub fn parse_combo(keys: &[String]) -> Result<Vec<KeyCode>, String> {
     keys.iter().map(|k| parse_key(k).ok_or_else(|| format!("unknown key name {k:?}"))).collect()
 }
 
-pub fn is_modifier(k: KeyCode) -> bool {
-    matches!(
-        k,
-        KeyCode::KEY_LEFTCTRL
-            | KeyCode::KEY_RIGHTCTRL
-            | KeyCode::KEY_LEFTSHIFT
-            | KeyCode::KEY_RIGHTSHIFT
-            | KeyCode::KEY_LEFTALT
-            | KeyCode::KEY_RIGHTALT
-            | KeyCode::KEY_LEFTMETA
-            | KeyCode::KEY_RIGHTMETA
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

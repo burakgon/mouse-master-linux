@@ -306,7 +306,8 @@ mod tests {
 
     #[test]
     fn classify() {
-        let event = Report::parse(&[0x11, 0xFF, 0x09, 0x00, 0x00, 0xC3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap();
+        let event =
+            Report::parse(&[0x11, 0xFF, 0x09, 0x00, 0x00, 0xC3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap();
         assert!(event.is_feature_event());
         let notif = Report::parse(&[0x10, 0x01, 0x41, 0x04, 0x02, 0x82, 0x40]).unwrap();
         assert!(notif.is_hidpp10_notification());

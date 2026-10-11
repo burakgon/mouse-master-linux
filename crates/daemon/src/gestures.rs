@@ -183,8 +183,7 @@ mod tests {
     use super::*;
 
     fn tracker(f: impl FnOnce(&mut GestureSet)) -> GestureTracker {
-        let mut set = GestureSet::default();
-        set.threshold_mm = 5.0;
+        let mut set = GestureSet { threshold_mm: 5.0, ..Default::default() };
         f(&mut set);
         GestureTracker::new(set, false)
     }
@@ -239,8 +238,7 @@ mod tests {
 
     #[test]
     fn skip_first_report() {
-        let mut set = GestureSet::default();
-        set.threshold_mm = 5.0;
+        let set = GestureSet { threshold_mm: 5.0, ..Default::default() };
         let mut t = GestureTracker::new(set, true);
         assert!(t.motion(mm(50.0), 0, 1000).is_empty());
         assert_eq!(t.release(), vec![GestureEvent::Click]);
