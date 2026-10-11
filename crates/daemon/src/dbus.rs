@@ -3,6 +3,7 @@
 //! Complex values travel as JSON strings: the data model evolves faster than a
 //! D-Bus type signature should, and every client (QML, Rust, shell) handles JSON.
 
+use std::os::unix::ffi::OsStrExt;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -25,7 +26,6 @@ pub const TRACKER_INTERFACE: &str = "io.github.burakgon.MouseMaster.WindowTracke
 pub struct DaemonIface {
     pub shared: Arc<Shared>,
     pub desktop: watch::Receiver<Desktop>,
-    pub input_available: bool,
 }
 
 fn json<T: serde::Serialize>(value: &T) -> String {
@@ -52,7 +52,7 @@ impl DaemonIface {
     /// settings will not work.
     #[zbus(property)]
     fn input_available(&self) -> bool {
-        self.input_available
+        self.shared.executor.input().is_some_and(|i| i.available())
     }
 
     /// JSON array of device snapshots.
@@ -73,6 +73,18 @@ impl DaemonIface {
             Ok(v) => Ok(json(&v)),
             Err(e) => Err(fdo::Error::Failed(e)),
         }
+    }
+
+    /// Health of the service: virtual input, the desktop, and other tools that
+    /// also take over Logitech buttons (they conflict with Mouse Master).
+    fn get_status(&self) -> String {
+        json(&serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "desktop": *self.desktop.borrow(),
+            "input_available": self.shared.executor.input().is_some_and(|i| i.available()),
+            "conflicts": conflicting_programs(),
+            "devices": self.shared.registry.snapshots().len(),
+        }))
     }
 
     /// Built-in actions available on the current desktop.
@@ -203,6 +215,35 @@ impl DaemonIface {
     /// The focused application changed (JSON `ActiveApp`).
     #[zbus(signal)]
     async fn focus_changed(emitter: &SignalEmitter<'_>, app: &str) -> zbus::Result<()>;
+}
+
+/// Other programs that divert Logitech controls; running both leads to
+/// buttons being taken over twice.
+pub fn conflicting_programs() -> Vec<&'static str> {
+    let known: [(&str, &str); 2] = [("solaar", "Solaar"), ("logid", "logiops (logid)")];
+    let mut found = Vec::new();
+    let Ok(entries) = std::fs::read_dir("/proc") else { return found };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        if !name.to_string_lossy().bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let Ok(cmdline) = std::fs::read(entry.path().join("cmdline")) else { continue };
+        // argv[0] and, for interpreted programs, argv[1] (python3 /usr/bin/solaar).
+        for arg in cmdline.split(|b| *b == 0).take(2) {
+            let base = std::path::Path::new(std::ffi::OsStr::from_bytes(arg))
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string());
+            if let Some(base) = base {
+                for (process, label) in known {
+                    if base == process && !found.contains(&label) {
+                        found.push(label);
+                    }
+                }
+            }
+        }
+    }
+    found
 }
 
 fn set_monitoring(shared: &Shared, enabled: bool) {

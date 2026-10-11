@@ -88,6 +88,23 @@ pub async fn run(shared: Arc<Shared>) {
         }
         Err(e) => warn!("cannot enumerate hidraw devices: {e}"),
     }
+    // Nodes that could not be opened (no access yet) are found again when our
+    // session becomes active.
+    {
+        let tx = tx.clone();
+        let mut present = shared.present.clone();
+        tokio::spawn(async move {
+            while present.changed().await.is_ok() {
+                if *present.borrow_and_update() {
+                    if let Ok(nodes) = hidraw::enumerate() {
+                        for info in nodes {
+                            let _ = tx.send(NodeEvent::Added(info));
+                        }
+                    }
+                }
+            }
+        });
+    }
     let mut active: HashSet<PathBuf> = HashSet::new();
     while let Some(event) = rx.recv().await {
         match event {
@@ -112,28 +129,34 @@ pub async fn run(shared: Arc<Shared>) {
 }
 
 async fn open_with_retry(info: &NodeInfo) -> Option<(Channel, hidpp::EventReceiver)> {
-    for attempt in 0..6 {
+    // Access is granted by udev to the active session; right after boot or a
+    // user switch that can take a little while.
+    let mut denied = 0u32;
+    let mut failed = 0u32;
+    loop {
         match Channel::open(info.clone()) {
             Ok(c) => return Some(c),
             Err(hidpp::Error::Io(e)) if e.kind() == std::io::ErrorKind::PermissionDenied => {
-                if attempt == 5 {
+                denied += 1;
+                if denied == 30 {
                     warn!(
                         "no permission to open {} — install the Mouse Master udev rules (see README)",
                         info.devnode.display()
                     );
                     return None;
                 }
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
             Err(e) => {
-                if attempt == 5 {
+                failed += 1;
+                if failed == 5 {
                     warn!("cannot open {}: {e}", info.devnode.display());
                     return None;
                 }
+                tokio::time::sleep(Duration::from_millis(300 * failed as u64)).await;
             }
         }
-        tokio::time::sleep(Duration::from_millis(300 * (attempt + 1))).await;
     }
-    None
 }
 
 async fn run_node(shared: Arc<Shared>, info: NodeInfo) {

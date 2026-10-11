@@ -6,6 +6,7 @@
 
 use std::io;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use evdev::uinput::VirtualDevice;
 use evdev::{AttributeSet, BusType, EventType, InputEvent, InputId, KeyCode, RelativeAxisCode};
@@ -29,6 +30,11 @@ pub trait InputSink: Send + Sync {
     fn reset_scroll(&self) {}
     /// Releases everything still held (on shutdown or device disconnect).
     fn release_all(&self);
+
+    /// Whether input can currently be delivered.
+    fn available(&self) -> bool {
+        true
+    }
 
     /// Presses keys in order (e.g. modifiers first).
     fn press(&self, keys: &[KeyCode]) {
@@ -78,6 +84,93 @@ pub struct VirtualInput {
 }
 
 pub type SharedInput = Arc<dyn InputSink>;
+
+/// Creates the uinput devices as soon as `/dev/uinput` is accessible.
+///
+/// At boot the service can start a moment before logind hands the session
+/// access to `/dev/uinput`; creation is retried on use and by [`LazyInput::keep_trying`].
+pub struct LazyInput {
+    inner: Mutex<Option<Arc<VirtualInput>>>,
+    last_attempt: Mutex<Option<Instant>>,
+    warned: std::sync::atomic::AtomicBool,
+}
+
+impl LazyInput {
+    pub fn new() -> Arc<LazyInput> {
+        let lazy = Arc::new(LazyInput {
+            inner: Mutex::new(None),
+            last_attempt: Mutex::new(None),
+            warned: std::sync::atomic::AtomicBool::new(false),
+        });
+        lazy.get();
+        lazy
+    }
+
+    /// The devices, creating them if needed (at most one attempt per second).
+    fn get(&self) -> Option<Arc<VirtualInput>> {
+        if let Some(v) = self.inner.lock().as_ref() {
+            return Some(v.clone());
+        }
+        {
+            let mut last = self.last_attempt.lock();
+            if last.is_some_and(|t| t.elapsed() < Duration::from_secs(1)) {
+                return None;
+            }
+            *last = Some(Instant::now());
+        }
+        match VirtualInput::new() {
+            Ok(v) => {
+                let v = Arc::new(v);
+                *self.inner.lock() = Some(v.clone());
+                if self.warned.load(std::sync::atomic::Ordering::Relaxed) {
+                    tracing::info!("virtual input devices are ready");
+                }
+                Some(v)
+            }
+            Err(e) => {
+                if !self.warned.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    warn!(
+                        "cannot create virtual input devices yet ({e}); retrying. If this persists, install the udev rules."
+                    );
+                }
+                None
+            }
+        }
+    }
+
+    /// Retries in the background until the devices exist.
+    pub async fn keep_trying(self: Arc<Self>) {
+        while self.get().is_none() {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+    }
+}
+
+impl InputSink for LazyInput {
+    fn set_key(&self, k: KeyCode, pressed: bool) {
+        if let Some(v) = self.get() {
+            v.set_key(k, pressed);
+        }
+    }
+    fn scroll(&self, vertical: i32, horizontal: i32) {
+        if let Some(v) = self.get() {
+            v.scroll(vertical, horizontal);
+        }
+    }
+    fn reset_scroll(&self) {
+        if let Some(v) = self.inner.lock().as_ref() {
+            v.reset_scroll();
+        }
+    }
+    fn release_all(&self) {
+        if let Some(v) = self.inner.lock().as_ref() {
+            v.release_all();
+        }
+    }
+    fn available(&self) -> bool {
+        self.get().is_some()
+    }
+}
 
 fn key_event(k: KeyCode, value: i32) -> InputEvent {
     InputEvent::new(EventType::KEY.0, k.0, value)

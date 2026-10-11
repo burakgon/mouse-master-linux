@@ -86,15 +86,9 @@ async fn run(args: Args) -> Result<()> {
     let input: Option<input::SharedInput> = if args.demo {
         None
     } else {
-        match input::VirtualInput::new() {
-            Ok(i) => Some(Arc::new(i)),
-            Err(e) => {
-                warn!(
-                    "cannot create virtual input devices ({e}); button actions are disabled. Install the udev rules."
-                );
-                None
-            }
-        }
+        let lazy = input::LazyInput::new();
+        tokio::spawn(lazy.clone().keep_trying());
+        Some(lazy)
     };
 
     let conn = zbus::Connection::session().await.context("connecting to the session bus")?;
@@ -119,10 +113,7 @@ async fn run(args: Args) -> Result<()> {
     });
 
     conn.object_server()
-        .at(
-            dbus::OBJECT_PATH,
-            dbus::DaemonIface { shared: shared.clone(), desktop: desktop_rx.clone(), input_available: input.is_some() },
-        )
+        .at(dbus::OBJECT_PATH, dbus::DaemonIface { shared: shared.clone(), desktop: desktop_rx.clone() })
         .await?;
     conn.object_server().at(dbus::OBJECT_PATH, dbus::TrackerIface { app_tx: app_tx.clone() }).await?;
     let reply = conn
@@ -134,6 +125,10 @@ async fn run(args: Args) -> Result<()> {
     }
 
     tokio::spawn(dbus::pump_events(conn.clone(), shared.clone(), events_tx.subscribe()));
+    let conflicts = dbus::conflicting_programs();
+    if !conflicts.is_empty() {
+        warn!("{} also configures Logitech devices; run only one of them", conflicts.join(" and "));
+    }
     {
         let shared = shared.clone();
         let mut rx = app_rx.clone();
