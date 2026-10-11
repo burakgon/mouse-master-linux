@@ -13,6 +13,7 @@ Item {
     property bool allowDefault: true
     property bool allowNone: true
     property bool holdActions: true      // keys/mouse are held while the control is held
+    property bool allowMacro: true
     signal picked(var action)
 
     property string filter: ""
@@ -29,6 +30,27 @@ Item {
     function isType(t) {
         return root.action && root.action.type === t
     }
+
+    // Open the section of a custom action and scroll to it, so the current
+    // choice is visible without searching for it.
+    readonly property var sectionOf: ({ "keys": "keys", "mouse": "mouse", "command": "command", "open": "open",
+                                        "set-dpi": "dpi", "shift-dpi": "dpi", "switch-host": "host", "macro": "macro" })
+    readonly property var sectionRows: ({ "keys": row_keys, "mouse": row_mouse, "command": row_command, "open": row_open,
+                                          "dpi": row_dpi, "host": row_host, "macro": row_macro })
+    function revealCurrent() {
+        var section = root.action ? root.sectionOf[root.action.type] : undefined
+        if (section === undefined || (section === "macro" && !root.allowMacro))
+            return
+        root.expandedCustom = section
+        Qt.callLater(function () {
+            var row = root.sectionRows[section]
+            var flick = scroller.contentItem as Flickable
+            if (row && flick)
+                flick.contentY = Math.max(0, Math.min(row.y - 8, flick.contentHeight - flick.height))
+        })
+    }
+    Component.onCompleted: revealCurrent()
+    onActionChanged: if (root.expandedCustom === "") revealCurrent()
 
     ColumnLayout {
         anchors.fill: parent
@@ -128,6 +150,7 @@ Item {
 
                 // Keyboard shortcut
                 ActionRow {
+                    id: row_keys
                     visible: root.matches("keyboard shortcut keys hotkey")
                     iconName: "keyboard"
                     label: "Keyboard shortcut"
@@ -153,6 +176,7 @@ Item {
 
                 // Mouse button
                 ActionRow {
+                    id: row_mouse
                     visible: root.matches("mouse button click left right middle back forward")
                     iconName: "mouse-pointer-click"
                     label: "Mouse button"
@@ -182,6 +206,7 @@ Item {
 
                 // Command
                 ActionRow {
+                    id: row_command
                     visible: root.matches("run command shell script terminal")
                     iconName: "terminal"
                     label: "Run a command"
@@ -214,6 +239,7 @@ Item {
 
                 // Open
                 ActionRow {
+                    id: row_open
                     visible: root.matches("open application app website url file folder launch")
                     iconName: "external-link"
                     label: "Open an app, website or file"
@@ -261,6 +287,7 @@ Item {
 
                 // DPI
                 ActionRow {
+                    id: row_dpi
                     visible: !!root.device && !!root.device.capabilities.dpi && root.matches("pointer speed dpi sensitivity precision sniper")
                     iconName: "gauge"
                     label: root.holdActions ? "Pointer speed" : "Set pointer speed"
@@ -308,6 +335,7 @@ Item {
 
                 // Easy-Switch
                 ActionRow {
+                    id: row_host
                     visible: !!root.device && (root.device.capabilities.hosts || 0) > 1 && root.matches("easy-switch host computer channel switch")
                     iconName: "monitor-smartphone"
                     label: "Switch computer"
@@ -333,6 +361,37 @@ Item {
                             onClicked: root.picked({ type: "switch-host", host: modelData.index })
                         }
                     }
+                }
+
+                // Sequence (macro)
+                ActionRow {
+                    id: row_macro
+                    visible: root.allowMacro && root.matches("sequence macro smart actions steps multiple")
+                    iconName: "list-checks"
+                    label: "Sequence of actions"
+                    detail: root.isType("macro") ? root.action.steps.length + " steps" : "Run several steps with one button"
+                    current: root.isType("macro")
+                    expandable: true
+                    expanded: root.expandedCustom === "macro"
+                    onClicked: root.expandedCustom = root.expandedCustom === "macro" ? "" : "macro"
+                }
+                Loader {
+                    id: macroLoader
+                    // Loaded by URL: the editor itself contains an action picker.
+                    active: root.allowMacro && root.expandedCustom === "macro"
+                    visible: active
+                    width: parent.width - 16
+                    x: 8
+                    source: "MacroEditor.qml"
+                    onLoaded: {
+                        item.device = root.device
+                        item.steps = root.isType("macro") ? root.action.steps : []
+                    }
+                }
+                Connections {
+                    target: macroLoader.item
+                    ignoreUnknownSignals: true
+                    function onAccepted(steps) { root.picked({ type: "macro", steps: steps }) }
                 }
 
                 Item { width: 1; height: 12 }

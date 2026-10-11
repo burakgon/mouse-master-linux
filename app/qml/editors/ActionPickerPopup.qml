@@ -55,6 +55,7 @@ C.Popup {
             height: root.availableHeight - 50
             allowNone: true
             holdActions: false
+            allowMacro: false
             onPicked: function (action) {
                 root.picked(action)
                 root.close()

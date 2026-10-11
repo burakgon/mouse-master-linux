@@ -150,11 +150,11 @@ ColumnLayout {
             anchors.fill: padBg
             z: 10
             visible: pad.trail.length > 1
-            readonly property real scale: 0.32
+            readonly property real zoom: 0.32
             readonly property real reach: width / 2 - 8
             function project(p) {
-                return Qt.point(width / 2 + Math.max(-reach, Math.min(reach, p.x * scale)),
-                                height / 2 + Math.max(-reach, Math.min(reach, p.y * scale)))
+                return Qt.point(width / 2 + Math.max(-reach, Math.min(reach, p.x * zoom)),
+                                height / 2 + Math.max(-reach, Math.min(reach, p.y * zoom)))
             }
             Shape {
                 anchors.fill: parent
