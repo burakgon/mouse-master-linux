@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.burakgon.MouseMaster</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Mouse Master</name>
+  <summary>Customize buttons, gestures and scrolling of Logitech mice</summary>
+  <description>
+    <p>
+      Mouse Master unlocks everything your Logitech mouse can do on Linux, on Wayland and X11 alike:
+      remap every button, hold the gesture button and move to switch desktops or control media,
+      tune pointer speed, SmartShift and the thumb wheel, and give each application its own setup.
+    </p>
+    <ul>
+      <li>Assign built-in actions, shortcuts, commands or apps to any button</li>
+      <li>Mouse gestures and drag-to-scroll (pan) on the gesture button or any other button</li>
+      <li>Per-application profiles that switch automatically (KDE Plasma, Hyprland, Sway)</li>
+      <li>Pointer speed (DPI), SmartShift sensitivity, scroll direction and resolution</li>
+      <li>Thumb wheel actions: zoom, volume, tabs, desktops and more</li>
+      <li>Easy-Switch host names, battery status and low battery notifications</li>
+      <li>Works with Bluetooth, Bolt, Unifying and Lightspeed connections</li>
+    </ul>
+    <p>Mouse Master is not affiliated with or endorsed by Logitech.</p>
+  </description>
+  <launchable type="desktop-id">io.github.burakgon.MouseMaster.desktop</launchable>
+  <developer id="io.github.burakgon">
+    <name>Burak Gon</name>
+  </developer>
+  <url type="homepage">https://github.com/burakgon/mouse-master</url>
+  <url type="bugtracker">https://github.com/burakgon/mouse-master/issues</url>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <categories>
+    <category>Settings</category>
+    <category>HardwareSettings</category>
+  </categories>
+  <keywords>
+    <keyword>logitech</keyword>
+    <keyword>mouse</keyword>
+    <keyword>gestures</keyword>
+    <keyword>dpi</keyword>
+  </keywords>
+  <releases>
+    <release version="0.1.0" date="2026-10-11">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b6cff"/>
+      <stop offset="0.55" stop-color="#4f7bff"/>
+      <stop offset="1" stop-color="#2fb7ff"/>
+    </linearGradient>
+    <linearGradient id="mouse" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe6ff"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)"/>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#gloss)"/>
+  <!-- gesture arcs -->
+  <path d="M 30 44 A 40 40 0 0 1 44 28" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 22 50 A 52 52 0 0 1 38 22" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="4" stroke-linecap="round"/>
+  <!-- mouse, with a soft shadow made of layered outlines -->
+  <g transform="translate(0 4)" fill="#1d2a7a" fill-opacity="0.10">
+    <path d="M 71 22 C 88 22 98 31 100 47 C 102 62 103 77 102 89 C 100 105 90 114 74 114 C 61 114 53 107 49 99 C 45 92 37 89 36 79 C 35 71 41 64 47 62 C 50 57 50 53 51 46 C 53 32 60 22 71 22 Z"/>
+  </g>
+  <g transform="translate(0 3)" fill="#1d2a7a" fill-opacity="0.12">
+    <path d="M 71 25 C 87 25 96 33 98 48 C 100 62 101 76 100 88 C 98 103 89 111 74 111 C 62 111 54 105 50 97 C 46 91 39 88 38 79 C 37 72 43 66 49 64 C 52 59 52 54 53 47 C 55 34 61 25 71 25 Z"/>
+  </g>
+  <g>
+    <path fill="url(#mouse)" d="
+      M 71 26
+      C 86 26 95 34 97 48
+      C 99 62 100 76 99 88
+      C 97 102 88 110 74 110
+      C 62 110 55 104 51 96
+      C 47 90 41 87 40 79
+      C 39 72 44 67 50 65
+      C 53 60 53 55 54 48
+      C 56 35 62 26 71 26 Z"/>
+  </g>
+  <path d="M 75 29 L 75 52" stroke="#4f7bff" stroke-opacity="0.35" stroke-width="2" stroke-linecap="round"/>
+  <rect x="71.5" y="34" width="7" height="14" rx="3.5" fill="#4f7bff"/>
+  <path d="M 54 56 C 64 61 86 62 98 57" fill="none" stroke="#4f7bff" stroke-opacity="0.25" stroke-width="2"/>
+</svg>

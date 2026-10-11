@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Mouse Master
+GenericName=Mouse Settings
+Comment=Customize buttons, gestures and scrolling of Logitech mice
+Exec=mouse-master
+Icon=io.github.burakgon.MouseMaster
+Terminal=false
+Categories=Settings;HardwareSettings;Qt;
+Keywords=logitech;mouse;mx;master;gestures;buttons;dpi;smartshift;thumbwheel;receiver;bolt;unifying;
+StartupNotify=true
+StartupWMClass=mouse-master
+SingleMainWindow=true

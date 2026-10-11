@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 560" width="400" height="560">
+  <defs>
+    <path id="silhouette" d="
+      M 214 26
+      C 262 26 298 50 310 98
+      C 322 146 330 214 330 286
+      C 330 372 318 444 284 494
+      C 258 530 216 544 176 540
+      C 132 536 100 512 84 478
+      C 70 448 46 432 32 400
+      C 18 366 24 326 50 306
+      C 70 290 92 286 104 262
+      C 112 244 114 214 118 176
+      C 124 120 136 72 160 46
+      C 174 32 192 26 214 26 Z"/>
+    <path id="thumbShelf" d="
+      M 104 262
+      C 92 286 70 290 50 306
+      C 24 326 18 366 32 400
+      C 46 432 70 448 84 478
+      C 98 486 116 480 120 462
+      C 126 436 116 406 112 378
+      C 108 346 112 314 120 292
+      C 116 278 110 268 104 262 Z"/>
+    <linearGradient id="body" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#555a64"/>
+      <stop offset="0.45" stop-color="#33363d"/>
+      <stop offset="1" stop-color="#1d1f23"/>
+    </linearGradient>
+    <linearGradient id="shelf" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#1b1d21"/>
+      <stop offset="1" stop-color="#2d3036"/>
+    </linearGradient>
+    <linearGradient id="btnL" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#666b75"/>
+      <stop offset="1" stop-color="#3a3d44"/>
+    </linearGradient>
+    <linearGradient id="btnR" x1="1" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#6e737d"/>
+      <stop offset="1" stop-color="#3c3f46"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5d626b"/>
+      <stop offset="0.45" stop-color="#d7dae0"/>
+      <stop offset="0.55" stop-color="#c3c7ce"/>
+      <stop offset="1" stop-color="#5d626b"/>
+    </linearGradient>
+    <linearGradient id="metalV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5d626b"/>
+      <stop offset="0.5" stop-color="#d0d3d9"/>
+      <stop offset="1" stop-color="#5d626b"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.66" cy="0.22" r="0.55">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="palm" cx="0.5" cy="0.62" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <g>
+    <use xlink:href="#silhouette" fill="url(#body)"/>
+  </g>
+  <use xlink:href="#thumbShelf" fill="url(#shelf)"/>
+  <use xlink:href="#silhouette" fill="url(#palm)"/>
+
+  <!-- left button -->
+  <path fill="url(#btnL)" d="
+    M 200 32
+    C 176 34 160 42 150 56
+    C 134 82 126 128 122 176
+    C 120 196 120 210 120 222
+    C 146 236 172 242 196 242
+    L 196 176
+    C 192 160 190 104 194 72
+    C 196 56 198 42 200 32 Z"/>
+  <!-- right button -->
+  <path fill="url(#btnR)" d="
+    M 228 32
+    C 266 36 296 56 306 100
+    C 314 136 320 186 322 236
+    C 290 248 258 252 230 248
+    L 230 176
+    C 234 160 236 104 232 72
+    C 230 56 229 42 228 32 Z"/>
+  <!-- seams -->
+  <path fill="none" stroke="#17191c" stroke-width="2.2" d="M 120 222 C 146 236 172 242 196 242"/>
+  <path fill="none" stroke="#17191c" stroke-width="2.2" d="M 230 248 C 258 252 290 248 322 236"/>
+
+  <!-- wheel well -->
+  <rect x="196" y="66" width="34" height="108" rx="17" fill="#111316"/>
+  <!-- wheel -->
+  <rect x="201" y="74" width="24" height="92" rx="12" fill="url(#metal)"/>
+  <g stroke="#2b2e33" stroke-width="1.4" opacity="0.55">
+    <line x1="202" y1="82" x2="224" y2="82"/><line x1="202" y1="89" x2="224" y2="89"/>
+    <line x1="202" y1="96" x2="224" y2="96"/><line x1="202" y1="103" x2="224" y2="103"/>
+    <line x1="202" y1="110" x2="224" y2="110"/><line x1="202" y1="117" x2="224" y2="117"/>
+    <line x1="202" y1="124" x2="224" y2="124"/><line x1="202" y1="131" x2="224" y2="131"/>
+    <line x1="202" y1="138" x2="224" y2="138"/><line x1="202" y1="145" x2="224" y2="145"/>
+    <line x1="202" y1="152" x2="224" y2="152"/><line x1="202" y1="159" x2="224" y2="159"/>
+  </g>
+  <!-- mode shift button -->
+  <rect x="203" y="186" width="20" height="30" rx="8" fill="#26292e" stroke="#575c66" stroke-width="1.2"/>
+
+  <!-- thumb wheel -->
+  <g transform="rotate(-24 96 280)">
+    <rect x="72" y="270" width="48" height="20" rx="10" fill="#101215"/>
+    <rect x="76" y="273" width="40" height="14" rx="7" fill="url(#metalV)"/>
+    <g stroke="#2b2e33" stroke-width="1.2" opacity="0.5">
+      <line x1="82" y1="274" x2="82" y2="286"/><line x1="88" y1="274" x2="88" y2="286"/>
+      <line x1="94" y1="274" x2="94" y2="286"/><line x1="100" y1="274" x2="100" y2="286"/>
+      <line x1="106" y1="274" x2="106" y2="286"/><line x1="112" y1="274" x2="112" y2="286"/>
+    </g>
+  </g>
+  <!-- forward / back buttons -->
+  <path fill="#40444c" stroke="#16181b" stroke-width="1.5" d="M 52 318 C 62 308 86 304 100 310 L 102 334 C 88 330 66 332 54 340 Z"/>
+  <path fill="#40444c" stroke="#16181b" stroke-width="1.5" d="M 52 346 C 64 338 86 336 102 340 L 104 364 C 88 362 68 364 56 372 Z"/>
+  <!-- gesture button zone -->
+  <path fill="none" stroke="#5b606a" stroke-width="2.4" stroke-linecap="round" opacity="0.8" d="M 44 402 C 56 424 74 440 96 448"/>
+
+  <use xlink:href="#silhouette" fill="url(#shine)"/>
+</svg>

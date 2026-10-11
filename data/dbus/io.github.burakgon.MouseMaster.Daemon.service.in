@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.github.burakgon.MouseMaster.Daemon
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/mouse-masterd
+SystemdService=mouse-master.service

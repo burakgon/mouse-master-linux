@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 560" width="400" height="560">
+  <defs>
+    <path id="silhouette" d="
+      M 200 40
+      C 262 40 300 72 306 140
+      C 312 210 314 300 308 380
+      C 300 470 262 528 200 528
+      C 138 528 100 470 92 380
+      C 86 300 88 210 94 140
+      C 100 72 138 40 200 40 Z"/>
+    <linearGradient id="body" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#555a64"/>
+      <stop offset="0.45" stop-color="#33363d"/>
+      <stop offset="1" stop-color="#1d1f23"/>
+    </linearGradient>
+    <linearGradient id="btnL" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#666b75"/>
+      <stop offset="1" stop-color="#3a3d44"/>
+    </linearGradient>
+    <linearGradient id="btnR" x1="1" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#6e737d"/>
+      <stop offset="1" stop-color="#3c3f46"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5d626b"/>
+      <stop offset="0.45" stop-color="#d7dae0"/>
+      <stop offset="0.55" stop-color="#c3c7ce"/>
+      <stop offset="1" stop-color="#5d626b"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.62" cy="0.24" r="0.55">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <use xlink:href="#silhouette" fill="url(#body)"/>
+  <path fill="url(#btnL)" d="M 196 46 C 150 48 108 72 100 138 C 96 176 94 210 94 236 C 128 248 164 252 192 252 L 192 186 C 188 168 186 110 190 80 Z"/>
+  <path fill="url(#btnR)" d="M 204 46 C 250 48 292 72 300 138 C 304 176 306 210 306 236 C 272 248 236 252 208 252 L 208 186 C 212 168 214 110 210 80 Z"/>
+  <path fill="none" stroke="#17191c" stroke-width="2.2" d="M 94 236 C 128 248 164 252 192 252 M 208 252 C 236 252 272 248 306 236"/>
+  <rect x="186" y="76" width="28" height="100" rx="14" fill="#111316"/>
+  <rect x="190" y="84" width="20" height="84" rx="10" fill="url(#metal)"/>
+  <g stroke="#2b2e33" stroke-width="1.3" opacity="0.55">
+    <line x1="191" y1="92" x2="209" y2="92"/><line x1="191" y1="100" x2="209" y2="100"/>
+    <line x1="191" y1="108" x2="209" y2="108"/><line x1="191" y1="116" x2="209" y2="116"/>
+    <line x1="191" y1="124" x2="209" y2="124"/><line x1="191" y1="132" x2="209" y2="132"/>
+    <line x1="191" y1="140" x2="209" y2="140"/><line x1="191" y1="148" x2="209" y2="148"/>
+    <line x1="191" y1="156" x2="209" y2="156"/>
+  </g>
+  <!-- side buttons on the left edge -->
+  <path fill="#40444c" stroke="#16181b" stroke-width="1.5" d="M 92 286 C 98 282 104 282 108 286 L 108 324 C 104 328 98 328 92 324 Z"/>
+  <path fill="#40444c" stroke="#16181b" stroke-width="1.5" d="M 92 334 C 98 330 104 330 108 334 L 108 372 C 104 376 98 376 92 372 Z"/>
+  <use xlink:href="#silhouette" fill="url(#shine)"/>
+</svg>

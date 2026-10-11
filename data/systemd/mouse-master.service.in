@@ -1,0 +1,21 @@
+[Unit]
+Description=Mouse Master - Logitech device configuration service
+Documentation=https://github.com/burakgon/mouse-master
+# Device access is granted by udev (uaccess) to the active session's user.
+After=dbus.socket
+
+[Service]
+Type=dbus
+BusName=io.github.burakgon.MouseMaster.Daemon
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/mouse-masterd
+Restart=on-failure
+RestartSec=2
+# Mouse Master only needs hidraw, uinput and the session bus.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=default.target
