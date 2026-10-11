@@ -4,6 +4,7 @@
 #include <QDBusMessage>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QMouseEvent>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
@@ -111,6 +112,29 @@ int main(int argc, char *argv[])
             }
         });
         QTimer::singleShot(delay, timer, qOverload<>(&QTimer::start));
+    }
+    // MM_CLICKS="x,y;x,y" clicks at window coordinates, one every 700 ms after the first second.
+    const QStringList clicks = qEnvironmentVariable("MM_CLICKS").split(QLatin1Char(';'), Qt::SkipEmptyParts);
+    for (qsizetype i = 0; i < clicks.size(); ++i) {
+        const QStringList xy = clicks[i].split(QLatin1Char(','));
+        if (xy.size() != 2) {
+            continue;
+        }
+        const QPointF pos(xy[0].toDouble(), xy[1].toDouble());
+        QTimer::singleShot(1000 + int(i) * 700, &app, [&engine, pos] {
+            const auto roots = engine.rootObjects();
+            auto window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow *>(roots.constFirst());
+            if (!window) {
+                return;
+            }
+            const QPointF global = window->mapToGlobal(pos);
+            QMouseEvent move(QEvent::MouseMove, pos, global, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QMouseEvent press(QEvent::MouseButtonPress, pos, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent release(QEvent::MouseButtonRelease, pos, global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(window, &move);
+            QCoreApplication::sendEvent(window, &press);
+            QCoreApplication::sendEvent(window, &release);
+        });
     }
     const QString shot = qEnvironmentVariable("MM_SCREENSHOT");
     if (!shot.isEmpty()) {
