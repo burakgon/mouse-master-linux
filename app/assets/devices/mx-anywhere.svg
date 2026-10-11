@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 560" width="400" height="560">
+  <defs>
+    <path id="silhouette" d="
+      M 200 70
+      C 252 70 284 98 290 152
+      C 296 206 298 286 294 352
+      C 290 430 258 492 200 492
+      C 142 492 110 430 106 352
+      C 102 286 104 206 110 152
+      C 116 98 148 70 200 70 Z"/>
+    <linearGradient id="body" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#555a64"/>
+      <stop offset="0.45" stop-color="#33363d"/>
+      <stop offset="1" stop-color="#1d1f23"/>
+    </linearGradient>
+    <linearGradient id="btnL" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#666b75"/>
+      <stop offset="1" stop-color="#3a3d44"/>
+    </linearGradient>
+    <linearGradient id="btnR" x1="1" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#6e737d"/>
+      <stop offset="1" stop-color="#3c3f46"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5d626b"/>
+      <stop offset="0.45" stop-color="#d7dae0"/>
+      <stop offset="0.55" stop-color="#c3c7ce"/>
+      <stop offset="1" stop-color="#5d626b"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2a2d33"/>
+      <stop offset="1" stop-color="#3f434b"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.62" cy="0.26" r="0.55">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <use xlink:href="#silhouette" fill="url(#body)"/>
+  <!-- buttons -->
+  <path fill="url(#btnL)" d="M 196 76 C 160 78 128 96 118 146 C 112 180 110 214 110 240 C 140 252 168 256 192 256 L 192 200 C 188 182 186 128 190 100 Z"/>
+  <path fill="url(#btnR)" d="M 204 76 C 240 78 272 96 282 146 C 288 180 290 214 290 240 C 260 252 232 256 208 256 L 208 200 C 212 182 214 128 210 100 Z"/>
+  <path fill="none" stroke="#17191c" stroke-width="2.2" d="M 110 240 C 140 252 168 256 192 256 M 208 256 C 232 256 260 252 290 240"/>
+  <!-- wheel -->
+  <rect x="186" y="96" width="28" height="92" rx="14" fill="#111316"/>
+  <rect x="190" y="103" width="20" height="78" rx="10" fill="url(#metal)"/>
+  <g stroke="#2b2e33" stroke-width="1.3" opacity="0.55">
+    <line x1="191" y1="110" x2="209" y2="110"/><line x1="191" y1="118" x2="209" y2="118"/>
+    <line x1="191" y1="126" x2="209" y2="126"/><line x1="191" y1="134" x2="209" y2="134"/>
+    <line x1="191" y1="142" x2="209" y2="142"/><line x1="191" y1="150" x2="209" y2="150"/>
+    <line x1="191" y1="158" x2="209" y2="158"/><line x1="191" y1="166" x2="209" y2="166"/>
+    <line x1="191" y1="174" x2="209" y2="174"/>
+  </g>
+  <!-- mode shift button -->
+  <rect x="191" y="200" width="18" height="26" rx="7" fill="#26292e" stroke="#575c66" stroke-width="1.2"/>
+  <!-- side buttons on the left flank -->
+  <path fill="url(#side)" stroke="#16181b" stroke-width="1.5" d="M 104 262 C 110 258 118 258 122 262 L 122 304 C 118 308 110 308 104 304 Z"/>
+  <path fill="url(#side)" stroke="#16181b" stroke-width="1.5" d="M 104 314 C 110 310 118 310 122 314 L 122 356 C 118 360 110 360 104 356 Z"/>
+  <use xlink:href="#silhouette" fill="url(#shine)"/>
+</svg>

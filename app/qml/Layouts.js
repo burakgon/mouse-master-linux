@@ -17,6 +17,19 @@ var layouts = {
             "gesture": { x: 66, y: 426, side: "left" }
         }
     },
+    "mx-anywhere": {
+        art: "qrc:/assets/devices/mx-anywhere.svg",
+        width: 400, height: 560,
+        spots: {
+            "right": { x: 256, y: 150, side: "right" },
+            "middle": { x: 200, y: 142, side: "right" },
+            "mode-shift": { x: 200, y: 213, side: "right" },
+            "left": { x: 146, y: 160, side: "left" },
+            "forward": { x: 113, y: 283, side: "left" },
+            "back": { x: 113, y: 335, side: "left" },
+            "gesture": { x: 200, y: 400, side: "right" }
+        }
+    },
     "generic": {
         art: "qrc:/assets/devices/generic-mouse.svg",
         width: 400, height: 560,
@@ -38,5 +51,7 @@ function forDevice(device) {
     var name = (device && device.name ? device.name : "").toLowerCase()
     if (name.indexOf("mx master") >= 0)
         return layouts["mx-master"]
+    if (name.indexOf("mx anywhere") >= 0)
+        return layouts["mx-anywhere"]
     return layouts["generic"]
 }
