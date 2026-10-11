@@ -49,8 +49,9 @@ async fn name_has_owner(conn: &zbus::Connection, name: &str) -> bool {
 
 /// Reads the environment of the systemd user manager, which desktops import
 /// their session variables (WAYLAND_DISPLAY, XDG_CURRENT_DESKTOP, ...) into.
-pub async fn systemd_environment(conn: &zbus::Connection) -> HashMap<String, String> {
+pub async fn systemd_environment(conn: Option<&zbus::Connection>) -> HashMap<String, String> {
     let mut env = HashMap::new();
+    let Some(conn) = conn else { return env };
     let reply = conn
         .call_method(
             Some("org.freedesktop.systemd1"),
@@ -86,7 +87,7 @@ pub async fn detect(conn: &zbus::Connection) -> Desktop {
     }
     let mut current = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
     if current.is_empty() {
-        current = systemd_environment(conn).await.remove("XDG_CURRENT_DESKTOP").unwrap_or_default();
+        current = systemd_environment(Some(conn)).await.remove("XDG_CURRENT_DESKTOP").unwrap_or_default();
     }
     let current = current.to_ascii_lowercase();
     if current.contains("kde") {
@@ -104,7 +105,7 @@ pub async fn detect(conn: &zbus::Connection) -> Desktop {
 
 /// Environment for programs started by actions: our own environment, overlaid
 /// with the session variables known to the systemd user manager.
-pub async fn session_environment(conn: &zbus::Connection) -> HashMap<String, String> {
+pub async fn session_environment(conn: Option<&zbus::Connection>) -> HashMap<String, String> {
     let mut env: HashMap<String, String> = std::env::vars().collect();
     for (k, v) in systemd_environment(conn).await {
         env.insert(k, v);
@@ -113,7 +114,7 @@ pub async fn session_environment(conn: &zbus::Connection) -> HashMap<String, Str
 }
 
 /// Runs a shell command detached from the service.
-pub async fn spawn_shell(conn: &zbus::Connection, desktop: Desktop, command: &str) {
+pub async fn spawn_shell(conn: Option<&zbus::Connection>, desktop: Desktop, command: &str) {
     if desktop == Desktop::Hyprland {
         // Let the compositor start it: correct environment, window rules apply.
         if let Some(instance) = hyprland::Instance::find() {
@@ -203,7 +204,7 @@ pub fn desktop_exec(path: &std::path::Path) -> Option<String> {
 }
 
 /// Opens a URL, path or application id.
-pub async fn open(conn: &zbus::Connection, desktop: Desktop, target: &str) {
+pub async fn open(conn: Option<&zbus::Connection>, desktop: Desktop, target: &str) {
     let target = target.trim();
     if target.is_empty() {
         return;

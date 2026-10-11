@@ -200,6 +200,12 @@ impl Hidraw {
         Ok(Hidraw { fd: AsyncFd::new(file)?, path: path.to_path_buf() })
     }
 
+    /// Wraps an already open descriptor, e.g. one end of a `SOCK_SEQPACKET`
+    /// socket pair connected to a simulated device. It must be non-blocking.
+    pub fn from_fd(fd: std::os::fd::OwnedFd, path: &Path) -> io::Result<Hidraw> {
+        Ok(Hidraw { fd: AsyncFd::new(File::from(fd))?, path: path.to_path_buf() })
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }

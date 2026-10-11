@@ -29,12 +29,12 @@ pub enum DeviceRequest {
 #[derive(Clone)]
 pub struct Executor {
     input: Option<SharedInput>,
-    conn: zbus::Connection,
+    conn: Option<zbus::Connection>,
     desktop: watch::Receiver<Desktop>,
 }
 
 impl Executor {
-    pub fn new(input: Option<SharedInput>, conn: zbus::Connection, desktop: watch::Receiver<Desktop>) -> Executor {
+    pub fn new(input: Option<SharedInput>, conn: Option<zbus::Connection>, desktop: watch::Receiver<Desktop>) -> Executor {
         Executor { input, conn, desktop }
     }
 
@@ -109,12 +109,12 @@ impl Executor {
             }
             Action::Command { command } => {
                 let (conn, desktop, command) = (self.conn.clone(), self.desktop(), command.clone());
-                tokio::spawn(async move { env::spawn_shell(&conn, desktop, &command).await });
+                tokio::spawn(async move { env::spawn_shell(conn.as_ref(), desktop, &command).await });
                 None
             }
             Action::Open { target } => {
                 let (conn, desktop, target) = (self.conn.clone(), self.desktop(), target.clone());
-                tokio::spawn(async move { env::open(&conn, desktop, &target).await });
+                tokio::spawn(async move { env::open(conn.as_ref(), desktop, &target).await });
                 None
             }
             Action::SetDpi { dpi } | Action::ShiftDpi { dpi } => Some(DeviceRequest::SetDpi(*dpi)),
@@ -142,7 +142,7 @@ impl Executor {
                 }
                 MacroStep::Click { button } => self.with_input(|i| i.click(button.code())),
                 MacroStep::Delay { ms } => tokio::time::sleep(Duration::from_millis((*ms).min(60_000) as u64)).await,
-                MacroStep::Command { command } => env::spawn_shell(&self.conn, self.desktop(), command).await,
+                MacroStep::Command { command } => env::spawn_shell(self.conn.as_ref(), self.desktop(), command).await,
             }
             // A small gap so applications see distinct events.
             tokio::time::sleep(Duration::from_millis(8)).await;
@@ -170,20 +170,20 @@ impl Executor {
             }
             Impl::OpenApp => {
                 let (conn, desktop) = (self.conn.clone(), self.desktop());
-                tokio::spawn(async move { env::spawn_shell(&conn, desktop, "mouse-master").await });
+                tokio::spawn(async move { env::spawn_shell(conn.as_ref(), desktop, "mouse-master").await });
             }
             Impl::Command(command) => {
                 let (conn, desktop) = (self.conn.clone(), self.desktop());
-                tokio::spawn(async move { env::spawn_shell(&conn, desktop, command).await });
+                tokio::spawn(async move { env::spawn_shell(conn.as_ref(), desktop, command).await });
             }
         }
         None
     }
 
     async fn kde_shortcut(&self, component: &str, name: &str) {
+        let Some(conn) = &self.conn else { return };
         let path = format!("/component/{component}");
-        let result = self
-            .conn
+        let result = conn
             .call_method(Some("org.kde.kglobalaccel"), path.as_str(), Some("org.kde.kglobalaccel.Component"), "invokeShortcut", &(name,))
             .await;
         if let Err(e) = result {
@@ -203,7 +203,7 @@ impl Executor {
     }
 
     async fn shell(&self, command: &str) {
-        env::spawn_shell(&self.conn, self.desktop(), command).await;
+        env::spawn_shell(self.conn.as_ref(), self.desktop(), command).await;
     }
 
     fn keys(&self, keys: &[K]) {
@@ -221,7 +221,7 @@ impl Executor {
             ("tofi-drun", "tofi-drun --drun-launch=true"),
             ("bemenu-run", "bemenu-run"),
         ];
-        let path = env::session_environment(&self.conn).await.remove("PATH").unwrap_or_default();
+        let path = env::session_environment(self.conn.as_ref()).await.remove("PATH").unwrap_or_default();
         for (bin, cmd) in LAUNCHERS {
             if path.split(':').any(|d| std::path::Path::new(d).join(bin).is_file()) {
                 self.shell(cmd).await;
@@ -232,7 +232,7 @@ impl Executor {
     }
 
     async fn screenshot(&self, region: bool) {
-        let path = env::session_environment(&self.conn).await.remove("PATH").unwrap_or_default();
+        let path = env::session_environment(self.conn.as_ref()).await.remove("PATH").unwrap_or_default();
         let has = |bin: &str| path.split(':').any(|d| std::path::Path::new(d).join(bin).is_file());
         let cmd = if has("hyprshot") {
             if region { "hyprshot -m region".to_string() } else { "hyprshot -m output".to_string() }

@@ -153,6 +153,11 @@ impl Channel {
     /// Opens the node and spawns its reader task. Must be called within a tokio runtime.
     pub fn open(info: NodeInfo) -> Result<(Channel, EventReceiver)> {
         let hidraw = Hidraw::open(&info.devnode)?;
+        Ok(Self::with_hidraw(hidraw, info))
+    }
+
+    /// Uses an already open transport (see [`crate::sim`]).
+    pub fn with_hidraw(hidraw: Hidraw, info: NodeInfo) -> (Channel, EventReceiver) {
         let inner = Arc::new(Inner {
             hidraw,
             info,
@@ -162,7 +167,7 @@ impl Channel {
         });
         let (tx, rx) = mpsc::unbounded_channel();
         tokio::spawn(reader_task(inner.clone(), tx));
-        Ok((Channel { inner }, rx))
+        (Channel { inner }, rx)
     }
 
     pub fn info(&self) -> &NodeInfo {

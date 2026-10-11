@@ -234,3 +234,18 @@ async fn run_receiver(
         let _ = mailbox.send(DeviceMsg::Shutdown);
     }
 }
+
+/// Runs a simulated node through the same code paths as real hardware (demo mode, tests).
+pub fn spawn_sim(shared: Arc<Shared>, topology: hidpp::sim::Topology) -> std::io::Result<hidpp::sim::SimHandle> {
+    let (fd, info, handle) = hidpp::sim::spawn(topology)?;
+    let hidraw = hidpp::hidraw::Hidraw::from_fd(fd, &info.devnode)?;
+    let model = receiver::receiver_model(info.vendor_id, info.product_id);
+    let (channel, mut events) = Channel::with_hidraw(hidraw, info);
+    tokio::spawn(async move {
+        match model {
+            Some(model) => run_receiver(shared, channel, &mut events, model).await,
+            None => run_direct(shared, channel, &mut events).await,
+        }
+    });
+    Ok(handle)
+}

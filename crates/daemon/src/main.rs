@@ -12,6 +12,9 @@ mod notify;
 mod thumbwheel;
 mod window;
 
+#[cfg(test)]
+mod tests;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -35,6 +38,9 @@ struct Args {
     /// More logging (-v debug, -vv trace).
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
+    /// Use simulated devices instead of real hardware (for trying the app and screenshots).
+    #[arg(long)]
+    demo: bool,
 }
 
 fn main() -> Result<()> {
@@ -60,11 +66,15 @@ fn main() -> Result<()> {
 
 async fn run(args: Args) -> Result<()> {
     info!("Mouse Master {} starting", env!("CARGO_PKG_VERSION"));
-    let config_path = args.config.unwrap_or_else(config::config_path);
+    let config_path = match (args.config, args.demo) {
+        (Some(path), _) => path,
+        (None, true) => env::runtime_dir().join("mouse-master-demo.toml"),
+        (None, false) => config::config_path(),
+    };
     let config = config::ConfigStore::open(config_path.clone());
     info!("configuration: {}", config_path.display());
 
-    let input = match input::VirtualInput::new() {
+    let input: Option<input::SharedInput> = match input::VirtualInput::new() {
         Ok(i) => Some(Arc::new(i)),
         Err(e) => {
             warn!("cannot create virtual input devices ({e}); button actions are disabled. Install the udev rules.");
@@ -77,8 +87,8 @@ async fn run(args: Args) -> Result<()> {
     let (app_tx, app_rx) = watch::channel(ActiveApp::default());
     let (events_tx, _) = broadcast::channel(512);
 
-    let executor = actions::exec::Executor::new(input.clone(), conn.clone(), desktop_rx.clone());
-    let notifier = notify::Notifier::new(conn.clone(), desktop_rx.clone());
+    let executor = actions::exec::Executor::new(input.clone(), Some(conn.clone()), desktop_rx.clone());
+    let notifier = notify::Notifier::new(Some(conn.clone()), desktop_rx.clone());
     let shared = Arc::new(Shared {
         config: config.clone(),
         executor,
@@ -117,7 +127,18 @@ async fn run(args: Args) -> Result<()> {
         });
     }
     tokio::spawn(window::run(conn.clone(), desktop_tx, app_tx));
-    tokio::spawn(devices::node::run(shared.clone()));
+    let mut _simulations = Vec::new();
+    if args.demo {
+        use hidpp::sim::{DeviceSpec, Topology};
+        info!("demo mode: using simulated devices");
+        _simulations.push(devices::node::spawn_sim(shared.clone(), Topology::Direct(DeviceSpec::mx_master_3s()))?);
+        _simulations.push(devices::node::spawn_sim(
+            shared.clone(),
+            Topology::Receiver { kind: hidpp::receiver::ReceiverKind::Bolt, devices: vec![DeviceSpec::mx_master_4()] },
+        )?);
+    } else {
+        tokio::spawn(devices::node::run(shared.clone()));
+    }
 
     wait_for_exit().await;
     info!("shutting down");

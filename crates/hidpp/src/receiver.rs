@@ -105,7 +105,10 @@ impl Receiver {
     pub async fn serial(&self) -> Result<String> {
         if self.model.kind == ReceiverKind::Bolt {
             let p = self.channel.read_register(DEVICE_INDEX_SELF, reg::BOLT_UNIQUE_ID, &[]).await?;
-            Ok(hex(p.as_slice()))
+            // Replies are zero padded; the unique id is what precedes the padding.
+            let bytes = p.as_slice();
+            let end = bytes.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
+            Ok(hex(&bytes[..end]))
         } else {
             let p = self.channel.read_register(DEVICE_INDEX_SELF, reg::RECEIVER_INFO, &[0x03]).await?;
             Ok(hex(p.bytes(1, 4)))

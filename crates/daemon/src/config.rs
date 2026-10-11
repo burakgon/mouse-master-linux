@@ -262,6 +262,10 @@ impl ConfigStore {
         self.inner.lock().devices.get(id).cloned().unwrap_or_default()
     }
 
+    pub fn has_device(&self, id: &str) -> bool {
+        self.inner.lock().devices.contains_key(id)
+    }
+
     /// Mutates the configuration and schedules a save.
     pub fn update<R>(&self, f: impl FnOnce(&mut Config) -> R) -> R {
         let r = f(&mut self.inner.lock());

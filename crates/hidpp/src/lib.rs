@@ -14,6 +14,7 @@ pub mod features;
 pub mod hidraw;
 pub mod receiver;
 pub mod report;
+pub mod sim;
 
 pub use channel::{Channel, EventReceiver};
 pub use device::{Device, FeatureEntry, FeatureTable};

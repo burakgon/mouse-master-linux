@@ -323,9 +323,17 @@ impl Actor {
         let protocol = format!("{}.{}", dev.protocol().0, dev.protocol().1);
 
         self.dev = Some(dev);
+        let first_time = !self.shared.config.has_device(&id);
+        let gesture_control = self.controls.iter().find(|c| Role::of(c.cid) == Role::Gesture && c.supports_raw_xy()).map(|c| c.cid);
         let config = self.shared.config.update_device(&id, |c| {
             if c.name != name {
                 c.name = name.clone();
+            }
+            if first_time {
+                // Out of the box, the gesture button does gestures (it does nothing natively).
+                if let Some(cid) = gesture_control {
+                    c.bindings.buttons.insert(controls::control_key(cid), Action::Gestures(Default::default()));
+                }
             }
             c.clone()
         });
