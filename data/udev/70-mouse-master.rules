@@ -1,0 +1,17 @@
+# Mouse Master: give the logged-in user access to Logitech HID++ devices and to
+# uinput, so the user service can configure devices and inject input without
+# running as root. `uaccess` grants access to the user of the active seat only.
+
+ACTION=="remove", GOTO="mouse_master_end"
+
+# Logitech receivers and devices connected over USB
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
+# Lenovo branded Logitech nano receiver
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17ef", ATTRS{idProduct}=="6042", TAG+="uaccess"
+# Logitech devices connected over Bluetooth
+SUBSYSTEM=="hidraw", KERNELS=="0005:046D:*", TAG+="uaccess"
+
+# Virtual input devices for actions, gestures and scrolling
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+LABEL="mouse_master_end"
