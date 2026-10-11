@@ -9,6 +9,8 @@
 #include <QQuickWindow>
 #include <QTimer>
 
+#include <memory>
+
 #include "iconprovider.h"
 
 namespace {
@@ -77,6 +79,9 @@ int main(int argc, char *argv[])
         if (qEnvironmentVariableIsSet("MM_PAGE")) {
             root->setProperty("currentPage", qEnvironmentVariable("MM_PAGE"));
         }
+        if (qEnvironmentVariableIsSet("MM_RECORD")) {
+            root->setProperty("devWatch", true);
+        }
         if (qEnvironmentVariableIsSet("MM_DEVICE")) {
             root->setProperty("devDevice", qEnvironmentVariable("MM_DEVICE"));
         }
@@ -86,6 +91,26 @@ int main(int argc, char *argv[])
         if (qEnvironmentVariableIsSet("MM_CONTROL")) {
             root->setProperty("devControl", qEnvironmentVariable("MM_CONTROL"));
         }
+    }
+    // MM_RECORD=dir captures frames (MM_RECORD_FPS, MM_RECORD_SECONDS) for animations in the docs.
+    const QString recordDir = qEnvironmentVariable("MM_RECORD");
+    if (!recordDir.isEmpty()) {
+        const int fps = qEnvironmentVariableIntValue("MM_RECORD_FPS") > 0 ? qEnvironmentVariableIntValue("MM_RECORD_FPS") : 20;
+        const int seconds = qEnvironmentVariableIntValue("MM_RECORD_SECONDS") > 0 ? qEnvironmentVariableIntValue("MM_RECORD_SECONDS") : 8;
+        const int delay = qEnvironmentVariableIntValue("MM_SCREENSHOT_DELAY") > 0 ? qEnvironmentVariableIntValue("MM_SCREENSHOT_DELAY") : 1500;
+        auto frame = std::make_shared<int>(0);
+        auto timer = new QTimer(&app);
+        timer->setInterval(1000 / fps);
+        QObject::connect(timer, &QTimer::timeout, &app, [&engine, recordDir, frame, total = fps * seconds] {
+            const auto roots = engine.rootObjects();
+            if (auto window = roots.isEmpty() ? nullptr : qobject_cast<QQuickWindow *>(roots.constFirst())) {
+                window->grabWindow().save(QStringLiteral("%1/frame_%2.jpg").arg(recordDir).arg(*frame, 4, 10, QLatin1Char('0')));
+            }
+            if (++*frame >= total) {
+                QCoreApplication::quit();
+            }
+        });
+        QTimer::singleShot(delay, timer, qOverload<>(&QTimer::start));
     }
     const QString shot = qEnvironmentVariable("MM_SCREENSHOT");
     if (!shot.isEmpty()) {

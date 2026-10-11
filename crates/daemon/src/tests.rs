@@ -31,7 +31,7 @@ struct Harness {
     shared: Arc<Shared>,
     input: Arc<RecordingInput>,
     app: watch::Sender<ActiveApp>,
-    _events: broadcast::Receiver<DaemonEvent>,
+    events: broadcast::Receiver<DaemonEvent>,
     _dir: tempfile::TempDir,
 }
 
@@ -54,7 +54,7 @@ impl Harness {
             active_app: app_rx,
             monitoring: AtomicBool::new(false),
         });
-        Harness { shared, input, app, _events: events, _dir: dir }
+        Harness { shared, input, app, events, _dir: dir }
     }
 
     fn sim(&self, topology: Topology) -> SimHandle {
@@ -431,6 +431,36 @@ async fn receiver_devices_reconnect() {
     // Haptics.
     h.command(&dev.id, json!({ "command": "play-haptic", "waveform": 4 })).await;
     assert_eq!(sim.snapshot(1).await.unwrap().haptics_played, vec![4]);
+}
+
+#[tokio::test]
+async fn presses_of_native_controls_are_reported_while_monitoring() {
+    let mut h = Harness::new();
+    let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
+    let dev = h.device("MX Master 3S").await;
+    h.shared.monitoring.store(true, std::sync::atomic::Ordering::Relaxed);
+    h.shared.registry.mailbox(&dev.id).unwrap().send(DeviceMsg::Monitor(true)).unwrap();
+    h.settle().await;
+    // Back keeps its native function, but its presses are reported.
+    let state = sim.snapshot(DIRECT).await.unwrap();
+    assert_eq!(state.reporting.get(&BACK), Some(&0x100));
+    while h.events.try_recv().is_ok() {}
+    sim.press(DIRECT, &[BACK]);
+    sim.release_all(DIRECT);
+    h.settle().await;
+    let mut presses = Vec::new();
+    while let Ok(ev) = h.events.try_recv() {
+        if let DaemonEvent::Button { control, pressed, .. } = ev {
+            presses.push((control, pressed));
+        }
+    }
+    assert_eq!(presses, vec![("back".to_string(), true), ("back".to_string(), false)]);
+    assert!(h.input().await.is_empty(), "native controls must not trigger actions");
+
+    // Monitoring off: analytics are turned off again.
+    h.shared.registry.mailbox(&dev.id).unwrap().send(DeviceMsg::Monitor(false)).unwrap();
+    h.settle().await;
+    assert_eq!(sim.snapshot(DIRECT).await.unwrap().reporting.get(&BACK), Some(&0x000));
 }
 
 #[tokio::test]

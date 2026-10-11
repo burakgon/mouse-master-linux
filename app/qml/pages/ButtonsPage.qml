@@ -20,7 +20,8 @@ Item {
     onDeviceChanged: if (profileId !== "" && !profile) profileId = ""
 
     // Live press highlighting and the gesture trail need the service to report input.
-    readonly property bool watching: visible && Window.window !== null && Window.window.active
+    property bool alwaysWatch: false
+    readonly property bool watching: visible && (alwaysWatch || (Window.window !== null && Window.window.active))
     onWatchingChanged: Daemon.setMonitoring(watching)
     Component.onCompleted: Daemon.setMonitoring(watching)
     Component.onDestruction: Daemon.setMonitoring(false)

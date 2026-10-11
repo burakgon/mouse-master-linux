@@ -15,7 +15,7 @@ and give every application its own setup. Native on KDE Plasma, Hyprland, Sway a
 ![Rust](https://img.shields.io/badge/service-Rust-orange)
 ![Qt 6](https://img.shields.io/badge/app-Qt%206%20%2F%20QML-41cd52)
 
-<img src="docs/screenshots/gestures.png" width="920" alt="Mouse Master: the gesture button of an MX Master 3S with up, down, left, right and click actions">
+<img src="docs/demo.gif" width="920" alt="Mouse Master: holding the gesture button of an MX Master 3S and moving the mouse; the app draws the gesture and lights up the recognised direction">
 
 </div>
 
@@ -62,7 +62,11 @@ Mouse Master is that app.
 
 <table>
   <tr>
+    <td><img src="docs/screenshots/gestures.png" alt="The gesture editor"></td>
     <td><img src="docs/screenshots/buttons-light.png" alt="Buttons page in light mode"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/settings.png" alt="Settings"></td>
     <td><img src="docs/screenshots/action-picker.png" alt="Choosing an action for the back button"></td>
   </tr>
   <tr>

@@ -47,6 +47,8 @@ C.ApplicationWindow {
     property string devControl: ""
     property string devTheme: ""
     property string devDevice: ""
+    // Keep live input on even when the window is not focused (recordings).
+    property bool devWatch: false
     onDevThemeChanged: if (devTheme !== "") Theme.mode = devTheme === "light" ? 1 : 2
 
     property string currentDevice: {
@@ -164,7 +166,7 @@ C.ApplicationWindow {
 
     Component { id: settingsPage; SettingsPage {} }
     Component { id: welcomePage; WelcomePage {} }
-    Component { id: buttonsPage; ButtonsPage { device: window.device; recentApps: window.recentApps; selected: window.devControl } }
+    Component { id: buttonsPage; ButtonsPage { device: window.device; recentApps: window.recentApps; selected: window.devControl; alwaysWatch: window.devWatch } }
     Component { id: scrollPage; PointScrollPage { device: window.device } }
     Component { id: easySwitchPage; EasySwitchPage { device: window.device } }
     Component { id: hapticsPage; HapticsPage { device: window.device } }

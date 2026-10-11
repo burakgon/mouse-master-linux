@@ -39,8 +39,12 @@ struct Args {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
     /// Use simulated devices instead of real hardware (for trying the app and screenshots).
+    /// Actions are logged instead of performed.
     #[arg(long)]
     demo: bool,
+    /// With --demo: keep pressing buttons and drawing gestures (for recordings).
+    #[arg(long, hide = true)]
+    showcase: bool,
 }
 
 fn main() -> Result<()> {
@@ -78,11 +82,17 @@ async fn run(args: Args) -> Result<()> {
     let config = config::ConfigStore::open(config_path.clone());
     info!("configuration: {}", config_path.display());
 
-    let input: Option<input::SharedInput> = match input::VirtualInput::new() {
-        Ok(i) => Some(Arc::new(i)),
-        Err(e) => {
-            warn!("cannot create virtual input devices ({e}); button actions are disabled. Install the udev rules.");
-            None
+    let input: Option<input::SharedInput> = if args.demo {
+        None
+    } else {
+        match input::VirtualInput::new() {
+            Ok(i) => Some(Arc::new(i)),
+            Err(e) => {
+                warn!(
+                    "cannot create virtual input devices ({e}); button actions are disabled. Install the udev rules."
+                );
+                None
+            }
         }
     };
 
@@ -91,7 +101,9 @@ async fn run(args: Args) -> Result<()> {
     let (app_tx, app_rx) = watch::channel(ActiveApp::default());
     let (events_tx, _) = broadcast::channel(512);
 
-    let executor = actions::exec::Executor::new(input.clone(), Some(conn.clone()), desktop_rx.clone());
+    // In demo mode nothing is sent to the desktop.
+    let action_conn = (!args.demo).then(|| conn.clone());
+    let executor = actions::exec::Executor::new(input.clone(), action_conn, desktop_rx.clone());
     let notifier = notify::Notifier::new(Some(conn.clone()), desktop_rx.clone());
     let shared = Arc::new(Shared {
         config: config.clone(),
@@ -135,7 +147,11 @@ async fn run(args: Args) -> Result<()> {
     if args.demo {
         use hidpp::sim::{DeviceSpec, Topology};
         info!("demo mode: using simulated devices");
-        _simulations.push(devices::node::spawn_sim(shared.clone(), Topology::Direct(DeviceSpec::mx_master_3s()))?);
+        let master = devices::node::spawn_sim(shared.clone(), Topology::Direct(DeviceSpec::mx_master_3s()))?;
+        if args.showcase {
+            tokio::spawn(showcase(master.clone()));
+        }
+        _simulations.push(master);
         _simulations.push(devices::node::spawn_sim(
             shared.clone(),
             Topology::Receiver { kind: hidpp::receiver::ReceiverKind::Bolt, devices: vec![DeviceSpec::mx_master_4()] },
@@ -164,6 +180,44 @@ async fn run(args: Args) -> Result<()> {
     }
     config.flush();
     Ok(())
+}
+
+/// Scripted input on a simulated MX Master 3S: gestures, then a few buttons, in a loop.
+async fn showcase(sim: hidpp::sim::SimHandle) {
+    const SLOT: u8 = 0xFF;
+    const GESTURE: u16 = 0x00C3;
+    const STEPS: usize = 24;
+    let pause = |ms| tokio::time::sleep(Duration::from_millis(ms));
+    pause(1500).await;
+    loop {
+        // About 11 mm at 1000 DPI in each direction, with a slight curve like a real hand.
+        for (dx, dy) in [(0.0f32, -440.0f32), (-440.0, 0.0), (440.0, 0.0), (0.0, 440.0)] {
+            sim.press(SLOT, &[GESTURE]);
+            pause(250).await;
+            sim.motion(SLOT, 0, 0);
+            for i in 0..STEPS {
+                let t = i as f32 / STEPS as f32;
+                let bend = (t * std::f32::consts::PI).cos() * 4.0;
+                let (sx, sy) = (dx / STEPS as f32, dy / STEPS as f32);
+                sim.motion(
+                    SLOT,
+                    (sx + bend * (dy != 0.0) as i32 as f32) as i16,
+                    (sy + bend * (dx != 0.0) as i32 as f32) as i16,
+                );
+                pause(20).await;
+            }
+            pause(250).await;
+            sim.release_all(SLOT);
+            pause(1300).await;
+        }
+        for cid in [0x0053u16, 0x0056, 0x0052, 0x00C4] {
+            sim.press(SLOT, &[cid]);
+            pause(350).await;
+            sim.release_all(SLOT);
+            pause(450).await;
+        }
+        pause(800).await;
+    }
 }
 
 async fn wait_for_exit() {

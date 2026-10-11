@@ -84,30 +84,6 @@ ColumnLayout {
             color: Theme.surfaceAlt
             border.width: 1
             border.color: Theme.stroke
-            // Live trail of the mouse while the gesture button is held.
-            Shape {
-                anchors.fill: parent
-                visible: pad.trail.length > 1
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                    strokeColor: Theme.accent
-                    strokeWidth: 3
-                    fillColor: "transparent"
-                    capStyle: ShapePath.RoundCap
-                    joinStyle: ShapePath.RoundJoin
-                    PathPolyline {
-                        path: {
-                            var pts = []
-                            var scale = 0.18
-                            var r = padBg.width / 2 - 6
-                            for (var i = 0; i < pad.trail.length; ++i)
-                                pts.push(Qt.point(padBg.width / 2 + Math.max(-r, Math.min(r, pad.trail[i].x * scale)),
-                                                  padBg.height / 2 + Math.max(-r, Math.min(r, pad.trail[i].y * scale))))
-                            return pts
-                        }
-                    }
-                }
-            }
         }
 
         component Slot: Rectangle {
@@ -167,6 +143,51 @@ ColumnLayout {
         Slot { direction: "click"; iconName: "mouse-pointer-click"; column: 1; row: 1 }
         Slot { direction: "right"; iconName: "arrow-big-right"; column: 2; row: 1 }
         Slot { direction: "down"; iconName: "arrow-big-down"; column: 1; row: 2 }
+
+        // Live trail of the mouse while the gesture button is held, drawn above the slots.
+        Item {
+            id: trailLayer
+            anchors.fill: padBg
+            z: 10
+            visible: pad.trail.length > 1
+            readonly property real scale: 0.32
+            readonly property real reach: width / 2 - 8
+            function project(p) {
+                return Qt.point(width / 2 + Math.max(-reach, Math.min(reach, p.x * scale)),
+                                height / 2 + Math.max(-reach, Math.min(reach, p.y * scale)))
+            }
+            Shape {
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                ShapePath {
+                    strokeColor: Theme.accentAlpha(0.35)
+                    strokeWidth: 10
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    joinStyle: ShapePath.RoundJoin
+                    PathPolyline { path: pad.trail.map(function (p) { return trailLayer.project(p) }) }
+                }
+                ShapePath {
+                    strokeColor: Theme.accent
+                    strokeWidth: 4
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    joinStyle: ShapePath.RoundJoin
+                    PathPolyline { path: pad.trail.map(function (p) { return trailLayer.project(p) }) }
+                }
+            }
+            Rectangle {
+                readonly property point tip: pad.trail.length ? trailLayer.project(pad.trail[pad.trail.length - 1]) : Qt.point(0, 0)
+                x: tip.x - width / 2
+                y: tip.y - height / 2
+                width: 16
+                height: 16
+                radius: 8
+                color: Theme.accent
+                border.width: 3
+                border.color: "#ffffff"
+            }
+        }
     }
 
     Label {

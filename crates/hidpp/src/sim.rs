@@ -162,7 +162,9 @@ struct DeviceState {
     ratchet: bool,
     thumb_diverted: bool,
     thumb_inverted: bool,
-    reporting: HashMap<u16, u8>,
+    /// Reporting flags per control: byte 2 of setCidReporting, plus the v4
+    /// extension byte shifted left by 8 (bit 0x100 = analytics key events).
+    reporting: HashMap<u16, u16>,
     haptic_enabled: bool,
     haptic_level: u8,
     played: Vec<u8>,
@@ -203,6 +205,10 @@ impl DeviceState {
 
     fn raw_xy(&self, cid: u16) -> bool {
         self.reporting.get(&cid).is_some_and(|f| f & 0x10 != 0)
+    }
+
+    fn analytics(&self, cid: u16) -> bool {
+        self.reporting.get(&cid).is_some_and(|f| f & 0x100 != 0)
     }
 
     /// Answers a HID++ 2.0 request: Ok(reply parameters) or Err(error code).
@@ -265,16 +271,21 @@ impl DeviceState {
                 if !spec.controls.iter().any(|c| c.cid == cid) {
                     return Err(0x02);
                 }
-                vec![p(0), p(1), self.reporting.get(&cid).copied().unwrap_or(0), 0, 0, 0]
+                let flags = self.reporting.get(&cid).copied().unwrap_or(0);
+                vec![p(0), p(1), flags as u8, 0, 0, (flags >> 8) as u8]
             }
             (id::REPROG_CONTROLS_V4, 3) => {
                 let cid = u16::from_be_bytes([p(0), p(1)]);
                 let Some(control) = spec.controls.iter().find(|c| c.cid == cid).copied() else { return Err(0x02) };
-                let bits = p(2);
+                let bits = p(2) as u16 | (p(5) as u16) << 8;
                 let mut flags = self.reporting.get(&cid).copied().unwrap_or(0);
-                for (value, valid, capability) in
-                    [(0x01u8, 0x02u8, 0x0020u16), (0x04, 0x08, 0x0040), (0x10, 0x20, 0x0100), (0x40, 0x80, 0x0200)]
-                {
+                for (value, valid, capability) in [
+                    (0x01u16, 0x02u16, 0x0020u16),
+                    (0x04, 0x08, 0x0040),
+                    (0x10, 0x20, 0x0100),
+                    (0x40, 0x80, 0x0200),
+                    (0x100, 0x200, 0x0400),
+                ] {
                     if bits & valid != 0 {
                         if bits & value != 0 {
                             if control.flags & capability == 0 {
@@ -287,7 +298,7 @@ impl DeviceState {
                     }
                 }
                 self.reporting.insert(cid, flags);
-                vec![p(0), p(1), bits, p(3), p(4)]
+                vec![p(0), p(1), p(2), p(3), p(4), p(5)]
             }
             (id::CHANGE_HOST, 0) => vec![spec.hosts.len() as u8, spec.current_host],
             (id::CHANGE_HOST, 1) => vec![],
@@ -457,7 +468,7 @@ pub enum SimCommand {
 #[derive(Debug, Clone, Default)]
 pub struct SimSnapshot {
     pub dpi: u16,
-    pub reporting: HashMap<u16, u8>,
+    pub reporting: HashMap<u16, u16>,
     pub thumb_diverted: bool,
     pub thumb_inverted: bool,
     pub wheel_mode: u8,
@@ -804,14 +815,34 @@ impl Sim {
         let mut out = Vec::new();
         match cmd {
             SimCommand::Buttons { cids, .. } => {
-                dev.pressed = cids;
-                let diverted: Vec<u16> = dev.pressed.iter().copied().filter(|c| dev.diverted(*c)).take(4).collect();
-                let mut params = Vec::new();
-                for cid in &diverted {
-                    params.extend_from_slice(&cid.to_be_bytes());
+                let before = std::mem::replace(&mut dev.pressed, cids);
+                // Analytics key events for controls that keep their native function.
+                let mut analytics = Vec::new();
+                for cid in dev.pressed.iter().filter(|c| !before.contains(c)) {
+                    if dev.analytics(*cid) && !dev.diverted(*cid) {
+                        analytics.extend_from_slice(&cid.to_be_bytes());
+                        analytics.push(1);
+                    }
                 }
-                // Real devices report every change of the diverted set, including "none held".
-                out.extend(Self::event(index, dev, id::REPROG_CONTROLS_V4, 0, &params));
+                for cid in before.iter().filter(|c| !dev.pressed.contains(c)) {
+                    if dev.analytics(*cid) && !dev.diverted(*cid) {
+                        analytics.extend_from_slice(&cid.to_be_bytes());
+                        analytics.push(0);
+                    }
+                }
+                if !analytics.is_empty() {
+                    out.extend(Self::event(index, dev, id::REPROG_CONTROLS_V4, 2, &analytics));
+                }
+                let held: Vec<u16> = dev.pressed.iter().copied().filter(|c| dev.diverted(*c)).take(4).collect();
+                let was: Vec<u16> = before.iter().copied().filter(|c| dev.diverted(*c)).take(4).collect();
+                if held != was {
+                    let mut params = Vec::new();
+                    for cid in &held {
+                        params.extend_from_slice(&cid.to_be_bytes());
+                    }
+                    // Every change of the diverted set is reported, including "none held".
+                    out.extend(Self::event(index, dev, id::REPROG_CONTROLS_V4, 0, &params));
+                }
             }
             SimCommand::Motion { dx, dy, .. } => {
                 if dev.pressed.iter().any(|c| dev.raw_xy(*c)) {
