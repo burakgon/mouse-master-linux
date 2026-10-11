@@ -65,6 +65,8 @@ enum Cmd {
     },
     /// Print the configuration (TOML-equivalent JSON).
     Config,
+    /// Check permissions, the service and conflicting tools.
+    Doctor,
     /// Switch a device to another Easy-Switch channel (1-based).
     Host {
         #[arg(short, long)]
@@ -297,11 +299,95 @@ fn print_info(d: &Value, catalog: &Value) {
     }
 }
 
+fn check(ok: bool, text: &str) -> bool {
+    let mark = if ok { style("32", "✓") } else { style("31", "✗") };
+    println!("{mark} {text}");
+    ok
+}
+
+fn can_open(path: &std::path::Path) -> bool {
+    std::fs::OpenOptions::new().read(true).write(true).open(path).is_ok()
+}
+
+async fn doctor(client: &Client) -> Result<()> {
+    let mut healthy = true;
+    let rules = ["/etc/udev/rules.d", "/usr/lib/udev/rules.d", "/lib/udev/rules.d"]
+        .iter()
+        .map(|d| std::path::Path::new(d).join("70-mouse-master.rules"))
+        .find(|p| p.exists());
+    healthy &= check(
+        rules.is_some(),
+        &match &rules {
+            Some(p) => format!("udev rules installed ({})", p.display()),
+            None => "udev rules missing: run scripts/install.sh, or use “Grant access” in the app".into(),
+        },
+    );
+    healthy &= check(can_open(std::path::Path::new("/dev/uinput")), "/dev/uinput is accessible");
+    let mut nodes = Vec::new();
+    if let Ok(entries) = std::fs::read_dir("/sys/class/hidraw") {
+        for entry in entries.flatten() {
+            let uevent = std::fs::read_to_string(entry.path().join("device/uevent")).unwrap_or_default();
+            if uevent.to_uppercase().contains(":0000046D:") {
+                let name = uevent.lines().find_map(|l| l.strip_prefix("HID_NAME=")).unwrap_or("?").to_string();
+                let dev = std::path::Path::new("/dev").join(entry.file_name());
+                nodes.push((dev, name));
+            }
+        }
+    }
+    nodes.sort();
+    if nodes.is_empty() {
+        check(false, "no Logitech HID devices found (is the mouse on and connected?)");
+        healthy = false;
+    }
+    for (dev, name) in &nodes {
+        healthy &= check(can_open(dev), &format!("{} ({name}) is accessible", dev.display()));
+    }
+    match client.json("GetStatus").await {
+        Ok(status) => {
+            check(
+                true,
+                &format!(
+                    "service {} is running on {}",
+                    status["version"].as_str().unwrap_or("?"),
+                    status["desktop"].as_str().unwrap_or("?")
+                ),
+            );
+            healthy &= check(status["input_available"] == true, "virtual input devices are ready");
+            for c in status["conflicts"].as_array().cloned().unwrap_or_default() {
+                healthy &= check(
+                    false,
+                    &format!("{} is running — it also takes over buttons; quit it", c.as_str().unwrap_or("?")),
+                );
+            }
+            for d in client.devices().await.unwrap_or_default() {
+                let via = d["connection"]["receiver"]
+                    .as_str()
+                    .map(str::to_string)
+                    .unwrap_or_else(|| d["connection"]["bus"].as_str().unwrap_or("?").to_string());
+                check(
+                    d["online"] == true,
+                    &format!("{} via {via}, battery {}", d["name"].as_str().unwrap_or("?"), battery_text(&d)),
+                );
+            }
+        }
+        Err(e) => {
+            healthy &= check(false, &format!("service: {e}"));
+        }
+    }
+    if healthy {
+        println!("\nEverything looks good.");
+        Ok(())
+    } else {
+        bail!("some checks failed")
+    }
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     let client = Client::new().await?;
     match cli.command {
+        Cmd::Doctor => doctor(&client).await?,
         Cmd::List => {
             for d in client.devices().await? {
                 let online = if d["online"] == true { style("32", "●") } else { style("90", "○") };
