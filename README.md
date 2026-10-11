@@ -235,10 +235,13 @@ More in [docs/architecture.md](docs/architecture.md).
 | Receiver pairing | planned | ✅ | — | ✅ |
 | Keyboards and lighting | planned | ✅ | partial | ✅ |
 
-Solaar and logiops both divert buttons too: run only one of these tools at a time.
+Solaar and logiops both divert buttons too: run only one of these tools at a time. Mouse
+Master warns you while one of them is running and applies your settings again once it quits.
 
 ## Troubleshooting
 
+- **First step** — `mouse-masterctl doctor` checks the device rules, access to every Logitech
+  device and to `/dev/uinput`, the service, and tools that get in the way.
 - **"Allow access to your devices" in the app** — the udev rule is missing. Click *Grant
   access* (asks for your password once), or install it by hand:
   `sudo install -m644 data/udev/70-mouse-master.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger`.

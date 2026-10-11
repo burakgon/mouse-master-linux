@@ -24,7 +24,7 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use tokio::sync::{broadcast, watch};
-use tracing::{info, warn};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use crate::devices::{DaemonEvent, DeviceMsg, Shared};
@@ -58,7 +58,10 @@ fn main() -> Result<()> {
     let filter = EnvFilter::try_from_env("MOUSE_MASTER_LOG").unwrap_or_else(|_| EnvFilter::new(default_level));
     // systemd adds its own timestamps.
     let under_systemd = std::env::var_os("JOURNAL_STREAM").is_some();
-    let builder = tracing_subscriber::fmt().with_env_filter(filter).with_target(args.verbose > 0);
+    let builder = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(args.verbose > 0)
+        .with_ansi(std::io::IsTerminal::is_terminal(&std::io::stdout()));
     if under_systemd {
         builder.without_time().init()
     } else {
@@ -110,6 +113,7 @@ async fn run(args: Args) -> Result<()> {
         active_app: app_rx.clone(),
         present: present_rx,
         monitoring: AtomicBool::new(false),
+        conflicts: Default::default(),
     });
 
     conn.object_server()
@@ -125,10 +129,7 @@ async fn run(args: Args) -> Result<()> {
     }
 
     tokio::spawn(dbus::pump_events(conn.clone(), shared.clone(), events_tx.subscribe()));
-    let conflicts = dbus::conflicting_programs();
-    if !conflicts.is_empty() {
-        warn!("{} also configures Logitech devices; run only one of them", conflicts.join(" and "));
-    }
+    tokio::spawn(dbus::watch_status(shared.clone()));
     {
         let shared = shared.clone();
         let mut rx = app_rx.clone();

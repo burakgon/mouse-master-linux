@@ -56,6 +56,7 @@ impl Harness {
             active_app: app_rx,
             present: present_rx,
             monitoring: AtomicBool::new(false),
+            conflicts: Default::default(),
         });
         Harness { shared, input, app, present, events, _dir: dir }
     }
@@ -531,4 +532,24 @@ async fn stopping_restores_native_behaviour() {
     let state = sim.snapshot(DIRECT).await.unwrap();
     assert!(state.reporting.values().all(|f| *f == 0), "{:?}", state.reporting);
     assert!(!state.thumb_diverted);
+}
+
+#[tokio::test]
+async fn resync_undoes_changes_made_by_other_programs() {
+    let h = Harness::new();
+    let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
+    let dev = h.device("MX Master 3S").await;
+    h.command(
+        &dev.id,
+        json!({ "command": "set-binding", "control": "back", "action": { "type": "builtin", "id": "copy" } }),
+    )
+    .await;
+    let diverted = |s: &hidpp::sim::SimSnapshot| s.reporting.get(&0x0053).is_some_and(|f| f & 0x01 != 0);
+    assert!(diverted(&sim.snapshot(DIRECT).await.unwrap()));
+    sim.send(SimCommand::Reset { slot: DIRECT });
+    h.settle().await;
+    assert!(!diverted(&sim.snapshot(DIRECT).await.unwrap()));
+    h.shared.registry.mailbox(&dev.id).unwrap().send(DeviceMsg::Resync).unwrap();
+    h.settle().await;
+    assert!(diverted(&sim.snapshot(DIRECT).await.unwrap()));
 }

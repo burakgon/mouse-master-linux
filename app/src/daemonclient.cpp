@@ -53,6 +53,7 @@ DaemonClient::DaemonClient(QObject *parent)
     bus.connect(Service, Path, Interface, QStringLiteral("GestureEvent"), this, SLOT(onGestureEvent(QString, QString, QString)));
     bus.connect(Service, Path, Interface, QStringLiteral("MotionEvent"), this, SLOT(onMotionEvent(QString, int, int)));
     bus.connect(Service, Path, Interface, QStringLiteral("FocusChanged"), this, SLOT(onFocusChanged(QString)));
+    bus.connect(Service, Path, Interface, QStringLiteral("StatusChanged"), this, SLOT(fetchStatus()));
 
     reload();
 }
@@ -70,6 +71,7 @@ void DaemonClient::reload()
         return;
     }
     fetchProperties();
+    fetchStatus();
     fetchDevices();
     fetchCatalog();
     fetchGeneral();
@@ -122,11 +124,24 @@ void DaemonClient::fetchProperties()
         const auto props = reply.value();
         m_version = props.value(QStringLiteral("Version")).toString();
         m_desktop = props.value(QStringLiteral("Desktop")).toString();
-        m_inputAvailable = props.value(QStringLiteral("InputAvailable"), true).toBool();
         m_activeApp = parseJson(props.value(QStringLiteral("ActiveApp")).toString()).toMap();
         Q_EMIT activeAppChanged();
         m_available = false; // force the notification below
         setAvailable(true);
+    });
+}
+
+void DaemonClient::fetchStatus()
+{
+    callJson(QStringLiteral("GetStatus"), {}, [this](const QVariant &v) {
+        const auto status = v.toMap();
+        const bool input = status.value(QStringLiteral("input_available"), true).toBool();
+        const auto conflicts = status.value(QStringLiteral("conflicts")).toStringList();
+        if (input != m_inputAvailable || conflicts != m_conflicts) {
+            m_inputAvailable = input;
+            m_conflicts = conflicts;
+            Q_EMIT statusChanged();
+        }
     });
 }
 

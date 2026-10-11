@@ -160,7 +160,7 @@ impl Actor {
                 }
                 // The receiver says it is gone: wait for it instead of polling.
                 Some(Some(DeviceMsg::Online(false))) => attempt = 0,
-                Some(Some(DeviceMsg::Report(_))) | Some(Some(DeviceMsg::Monitor(_))) => {}
+                Some(Some(DeviceMsg::Report(_) | DeviceMsg::Monitor(_) | DeviceMsg::Resync)) => {}
                 Some(Some(DeviceMsg::Command(_, reply))) => {
                     let _ = reply.send(Err("device is offline".into()));
                 }
@@ -189,6 +189,10 @@ impl Actor {
                         break;
                     }
                     Some(DeviceMsg::Monitor(on)) => self.update_analytics(on).await,
+                    Some(DeviceMsg::Resync) => {
+                        self.resync().await;
+                        self.publish();
+                    }
                     Some(DeviceMsg::Report(report)) => self.on_report(report).await,
                     Some(DeviceMsg::Online(online)) => self.on_online(online).await,
                     Some(DeviceMsg::Command(cmd, reply)) => {
@@ -828,20 +832,28 @@ impl Actor {
             self.paused = true;
         } else {
             self.paused = false;
-            if let Some(dev) = self.dev.clone() {
-                // Somebody else may have changed the device meanwhile.
-                self.applied = Self::read_diversions(&dev, &self.controls).await;
-                if let Ok(st) = thumbwheel::status(&dev).await {
-                    self.thumb_applied = Some((st.diverted, st.inverted));
-                }
-            }
-            let config = self.shared.config.device(&self.id());
-            self.apply_configuration(&config).await;
-            if self.shared.monitoring() {
-                self.update_analytics(true).await;
-            }
+            // Somebody else may have changed the device meanwhile.
+            self.resync().await;
         }
         self.publish();
+    }
+
+    /// Reads back what is diverted and applies the configuration again.
+    async fn resync(&mut self) {
+        if self.paused || !self.snap.as_ref().is_some_and(|s| s.online) {
+            return;
+        }
+        if let Some(dev) = self.dev.clone() {
+            self.applied = Self::read_diversions(&dev, &self.controls).await;
+            if let Ok(st) = thumbwheel::status(&dev).await {
+                self.thumb_applied = Some((st.diverted, st.inverted));
+            }
+        }
+        let config = self.shared.config.device(&self.id());
+        self.apply_configuration(&config).await;
+        if self.shared.monitoring() {
+            self.update_analytics(true).await;
+        }
     }
 
     async fn on_app(&mut self, app: ActiveApp) {

@@ -462,6 +462,10 @@ pub enum SimCommand {
     PowerCycle {
         slot: u8,
     },
+    /// Another program puts the device back to its defaults, silently.
+    Reset {
+        slot: u8,
+    },
 }
 
 /// A probe into the simulation state, for assertions.
@@ -797,7 +801,8 @@ impl Sim {
             | SimCommand::Ratchet { slot, .. }
             | SimCommand::Battery { slot, .. }
             | SimCommand::Online { slot, .. }
-            | SimCommand::PowerCycle { slot } => *slot,
+            | SimCommand::PowerCycle { slot }
+            | SimCommand::Reset { slot } => *slot,
         };
         let index = if receiver { slot } else { 0xFF };
         if let SimCommand::Online { online, .. } = cmd {
@@ -871,6 +876,7 @@ impl Sim {
                 dev.reset_volatile();
                 out.extend(Self::event(index, dev, id::WIRELESS_DEVICE_STATUS, 0, &[1, 1, 1]));
             }
+            SimCommand::Reset { .. } => dev.reset_volatile(),
             SimCommand::Online { .. } => {}
         }
         out

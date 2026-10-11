@@ -21,3 +21,4 @@ All notable changes to this project are documented here. The format follows
 - Easy-Switch host names, renaming and switching; battery notifications; haptics.
 - Bluetooth, Bolt, Unifying and Lightspeed support.
 - A HID++ simulator, an end-to-end test suite and `mouse-masterd --demo`.
+- `mouse-masterctl doctor`, and a warning in the app while Solaar or logiops is running.

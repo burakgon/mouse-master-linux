@@ -5,6 +5,7 @@
 #include <functional>
 #include <QJSValue>
 #include <QObject>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
@@ -24,7 +25,9 @@ class DaemonClient : public QObject
     Q_PROPERTY(QVariantMap activeApp READ activeApp NOTIFY activeAppChanged)
     Q_PROPERTY(QString desktop READ desktop NOTIFY availableChanged)
     Q_PROPERTY(QString version READ version NOTIFY availableChanged)
-    Q_PROPERTY(bool inputAvailable READ inputAvailable NOTIFY availableChanged)
+    Q_PROPERTY(bool inputAvailable READ inputAvailable NOTIFY statusChanged)
+    /// Running programs that also configure Logitech devices ("Solaar", ...).
+    Q_PROPERTY(QStringList conflicts READ conflicts NOTIFY statusChanged)
 
 public:
     explicit DaemonClient(QObject *parent = nullptr);
@@ -38,6 +41,7 @@ public:
     QString desktop() const { return m_desktop; }
     QString version() const { return m_version; }
     bool inputAvailable() const { return m_inputAvailable; }
+    QStringList conflicts() const { return m_conflicts; }
 
     /// Snapshot of one device (empty map if unknown).
     Q_INVOKABLE QVariantMap device(const QString &id) const;
@@ -58,6 +62,7 @@ Q_SIGNALS:
     void catalogChanged();
     void generalChanged();
     void activeAppChanged();
+    void statusChanged();
     void deviceUpdated(const QString &id);
     void buttonEvent(const QString &id, const QString &control, bool pressed);
     void gestureEvent(const QString &id, const QString &control, const QString &gesture);
@@ -72,6 +77,7 @@ private Q_SLOTS:
     void onGestureEvent(const QString &id, const QString &control, const QString &gesture);
     void onMotionEvent(const QString &id, int dx, int dy);
     void onFocusChanged(const QString &app);
+    void fetchStatus();
 
 private:
     void setAvailable(bool available);
@@ -92,4 +98,5 @@ private:
     QString m_desktop;
     QString m_version;
     bool m_inputAvailable = true;
+    QStringList m_conflicts;
 };

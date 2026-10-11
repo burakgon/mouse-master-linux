@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use serde::Deserialize;
 use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
@@ -45,6 +45,8 @@ pub enum DaemonEvent {
         gesture: String,
     },
     ActiveApp(ActiveApp),
+    /// Virtual input became (un)available or conflicting tools started or quit.
+    StatusChanged,
 }
 
 /// Requests handled by a device actor.
@@ -121,6 +123,9 @@ pub enum DeviceMsg {
     Stop(oneshot::Sender<()>),
     /// A client started or stopped watching live input (press highlighting).
     Monitor(bool),
+    /// Another program may have changed the device: read it back and apply
+    /// the configuration again.
+    Resync,
 }
 
 pub type Mailbox = mpsc::UnboundedSender<DeviceMsg>;
@@ -193,6 +198,8 @@ pub struct Shared {
     pub present: watch::Receiver<bool>,
     /// A client asked for live motion events (gesture preview).
     pub monitoring: AtomicBool,
+    /// Running programs that also configure Logitech devices.
+    pub conflicts: Mutex<Vec<&'static str>>,
 }
 
 impl Shared {
@@ -202,6 +209,10 @@ impl Shared {
 
     pub fn monitoring(&self) -> bool {
         self.monitoring.load(Ordering::Relaxed)
+    }
+
+    pub fn input_available(&self) -> bool {
+        self.executor.input().is_some_and(|i| i.available())
     }
 
     /// Sends a command to a device and waits for the reply.

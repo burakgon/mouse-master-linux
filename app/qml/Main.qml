@@ -132,9 +132,61 @@ C.ApplicationWindow {
                 return window.currentPage
             }
 
+            // Problems that affect every page.
+            Column {
+                id: notices
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 24
+                anchors.bottomMargin: 0
+                spacing: 8
+                readonly property var conflicts: Daemon.available ? Daemon.conflicts : []
+
+                Banner {
+                    width: parent.width
+                    visible: notices.conflicts.length > 0
+                    title: notices.conflicts.join(" and ") + (notices.conflicts.length > 1 ? " are" : " is") + " also running"
+                    text: (notices.conflicts.length > 1 ? "They change" : "It changes")
+                        + " the same button and wheel settings, so the programs will undo each other's changes. Quit "
+                        + (notices.conflicts.length > 1 ? "them" : "it")
+                        + " and turn off autostart; Mouse Master applies your settings again as soon as "
+                        + (notices.conflicts.length > 1 ? "they are" : "it is") + " gone."
+                    AppButton {
+                        visible: notices.conflicts.some(function (c) { return c.indexOf("logid") >= 0 })
+                        text: "Copy command"
+                        iconName: "copy"
+                        compact: true
+                        onClicked: {
+                            System.copyToClipboard("sudo systemctl disable --now logid")
+                            Notify.show("Copied “sudo systemctl disable --now logid”", false)
+                        }
+                    }
+                }
+                Banner {
+                    width: parent.width
+                    visible: Daemon.available && !Daemon.inputAvailable
+                    title: "Button actions are paused"
+                    text: "Mouse Master cannot create its virtual keyboard and mouse because /dev/uinput is not accessible. Device settings still work."
+                    AppButton {
+                        text: "Grant access"
+                        kind: "primary"
+                        compact: true
+                        enabled: !System.busy
+                        onClicked: System.installRules(function (ok) {
+                            Notify.show(ok ? "Device access granted" : "Could not install the rules", !ok)
+                            if (ok) System.restartService()
+                        })
+                    }
+                }
+            }
+
             Loader {
                 id: pageLoader
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.top: notices.visibleChildren.length > 0 ? notices.bottom : parent.top
                 sourceComponent: {
                     switch (content.effectivePage) {
                     case "settings": return settingsPage

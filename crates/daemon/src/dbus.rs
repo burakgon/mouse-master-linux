@@ -8,14 +8,14 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use tokio::sync::{broadcast, watch};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 use zbus::fdo;
 use zbus::object_server::SignalEmitter;
 
 use crate::actions::Action;
 use crate::actions::catalog;
 use crate::config::{Config, General};
-use crate::devices::{Command, DaemonEvent, Shared};
+use crate::devices::{Command, DaemonEvent, DeviceMsg, Shared};
 use crate::env::Desktop;
 use crate::window::ActiveApp;
 
@@ -52,7 +52,7 @@ impl DaemonIface {
     /// settings will not work.
     #[zbus(property)]
     fn input_available(&self) -> bool {
-        self.shared.executor.input().is_some_and(|i| i.available())
+        self.shared.input_available()
     }
 
     /// JSON array of device snapshots.
@@ -81,8 +81,8 @@ impl DaemonIface {
         json(&serde_json::json!({
             "version": env!("CARGO_PKG_VERSION"),
             "desktop": *self.desktop.borrow(),
-            "input_available": self.shared.executor.input().is_some_and(|i| i.available()),
-            "conflicts": conflicting_programs(),
+            "input_available": self.shared.input_available(),
+            "conflicts": *self.shared.conflicts.lock(),
             "devices": self.shared.registry.snapshots().len(),
         }))
     }
@@ -215,10 +215,42 @@ impl DaemonIface {
     /// The focused application changed (JSON `ActiveApp`).
     #[zbus(signal)]
     async fn focus_changed(emitter: &SignalEmitter<'_>, app: &str) -> zbus::Result<()>;
+
+    /// What `GetStatus` returns changed.
+    #[zbus(signal)]
+    async fn status_changed(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
 }
 
 /// Other programs that divert Logitech controls; running both leads to
 /// buttons being taken over twice.
+/// Follows virtual input and conflicting tools and tells clients when either
+/// changes. A tool that quits may leave its own settings on the devices, so
+/// they are synchronised again.
+pub async fn watch_status(shared: Arc<Shared>) {
+    let mut input = shared.input_available();
+    loop {
+        let now = tokio::task::spawn_blocking(conflicting_programs).await.unwrap_or_default();
+        let before = std::mem::replace(&mut *shared.conflicts.lock(), now.clone());
+        let started: Vec<_> = now.iter().filter(|p| !before.contains(p)).copied().collect();
+        let quit: Vec<_> = before.iter().filter(|p| !now.contains(p)).copied().collect();
+        if !started.is_empty() {
+            warn!("{} also configures Logitech devices; run only one of them", started.join(" and "));
+        }
+        if !quit.is_empty() {
+            info!("{} quit; applying settings again", quit.join(" and "));
+            for mailbox in shared.registry.mailboxes() {
+                let _ = mailbox.send(DeviceMsg::Resync);
+            }
+        }
+        let input_now = shared.input_available();
+        if !started.is_empty() || !quit.is_empty() || input_now != input {
+            input = input_now;
+            shared.emit(DaemonEvent::StatusChanged);
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    }
+}
+
 pub fn conflicting_programs() -> Vec<&'static str> {
     let known: [(&str, &str); 2] = [("solaar", "Solaar"), ("logid", "logiops (logid)")];
     let mut found = Vec::new();
@@ -317,6 +349,10 @@ pub async fn pump_events(conn: zbus::Connection, shared: Arc<Shared>, mut events
                 let r = DaemonIface::focus_changed(&emitter, &json(&app)).await;
                 let _ = iface.get().await.active_app_changed(&emitter).await;
                 r
+            }
+            DaemonEvent::StatusChanged => {
+                let _ = iface.get().await.input_available_changed(&emitter).await;
+                DaemonIface::status_changed(&emitter).await
             }
         };
         if let Err(e) = result {
