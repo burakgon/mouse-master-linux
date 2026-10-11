@@ -153,6 +153,20 @@ C.ApplicationWindow {
 
                 Banner {
                     width: parent.width
+                    visible: System.updated
+                    iconName: "refresh-cw"
+                    tone: Theme.accent
+                    title: "Mouse Master was updated"
+                    text: "This window still runs the previous version, which may not know the newest settings. Restart it to use the new one."
+                    AppButton {
+                        text: "Restart"
+                        kind: "primary"
+                        compact: true
+                        onClicked: System.restartApp()
+                    }
+                }
+                Banner {
+                    width: parent.width
                     visible: notices.conflicts.length > 0
                     title: notices.conflicts.join(" and ") + (notices.conflicts.length > 1 ? " are" : " is") + " also running"
                     text: (notices.conflicts.length > 1 ? "They change" : "It changes")

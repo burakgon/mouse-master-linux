@@ -3,10 +3,12 @@
 
 #include <QClipboard>
 #include <QCoreApplication>
+#include <QDBusConnection>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QGuiApplication>
 #include <QJSEngine>
 #include <QProcess>
@@ -15,11 +17,13 @@
 #include <QTemporaryFile>
 #include <QUrl>
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 namespace {
 const QString Unit = QStringLiteral("mouse-master.service");
 const QString RulesName = QStringLiteral("70-mouse-master.rules");
+const QString AppId = QStringLiteral("io.github.burakgon.MouseMaster");
 
 QString localPath(const QString &url)
 {
@@ -32,6 +36,46 @@ SystemIntegration::SystemIntegration(QObject *parent)
     : QObject(parent)
 {
     refresh();
+    watchExecutable();
+}
+
+void SystemIntegration::watchExecutable()
+{
+    struct stat st;
+    if (::stat("/proc/self/exe", &st) != 0) {
+        return;
+    }
+    m_exePath = QCoreApplication::applicationFilePath();
+    m_exeDev = st.st_dev;
+    m_exeIno = st.st_ino;
+    // Updates replace the file rather than write into it, so watch its directory.
+    m_watcher = new QFileSystemWatcher({QFileInfo(m_exePath).absolutePath()}, this);
+    connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &SystemIntegration::checkUpdated);
+}
+
+void SystemIntegration::checkUpdated()
+{
+    struct stat st;
+    // While the update is in progress the file may be missing; the next change checks again.
+    if (m_updated || ::stat(QFile::encodeName(m_exePath).constData(), &st) != 0) {
+        return;
+    }
+    if (st.st_dev != m_exeDev || st.st_ino != m_exeIno) {
+        m_updated = true;
+        Q_EMIT updatedChanged();
+    }
+}
+
+void SystemIntegration::restartApp()
+{
+    // Hand the single-instance name over, or the new copy would only raise this window.
+    auto bus = QDBusConnection::sessionBus();
+    bus.unregisterService(AppId);
+    if (QProcess::startDetached(m_exePath, QCoreApplication::arguments().mid(1))) {
+        QCoreApplication::quit();
+    } else {
+        bus.registerService(AppId);
+    }
 }
 
 QString SystemIntegration::hostName() const
