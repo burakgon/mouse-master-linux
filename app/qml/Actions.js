@@ -25,7 +25,8 @@ var nativeIcons = {
     "forward": "arrow-right",
     "mode-shift": "disc-3",
     "thumbwheel": "move-horizontal",
-    "gesture": "hand"
+    "gesture": "hand",
+    "haptic-panel": "vibrate"
 }
 
 var modifierOrder = ["KEY_LEFTCTRL", "KEY_RIGHTCTRL", "KEY_LEFTSHIFT", "KEY_RIGHTSHIFT",

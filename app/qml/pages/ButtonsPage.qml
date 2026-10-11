@@ -19,6 +19,12 @@ Item {
     }
     onDeviceChanged: if (profileId !== "" && !profile) profileId = ""
 
+    // Live press highlighting and the gesture trail need the service to report input.
+    readonly property bool watching: visible && Window.window !== null && Window.window.active
+    onWatchingChanged: Daemon.setMonitoring(watching)
+    Component.onCompleted: Daemon.setMonitoring(watching)
+    Component.onDestruction: Daemon.setMonitoring(false)
+
     // Effective binding of every control in the selected profile.
     readonly property var bindings: {
         var out = {}

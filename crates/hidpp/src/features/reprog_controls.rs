@@ -172,6 +172,16 @@ pub async fn set_reporting(dev: &Device, cid: u16, change: ReportingChange) -> R
     dev.call(id::REPROG_CONTROLS_V4, 3, &change.encode(cid)).await.map(|_| ())
 }
 
+/// Turns analytics key events on or off for a control. The control keeps its
+/// normal behaviour; presses and releases are additionally reported as
+/// [`Event::Analytics`]. Requires the `ANALYTICS_KEY_EVENTS` capability.
+pub async fn set_analytics(dev: &Device, cid: u16, enabled: bool) -> Result<()> {
+    let c = cid.to_be_bytes();
+    // Byte 2 has no valid bits set and the remap target is 0: only the v4
+    // extension byte (bit 0 analytics, bit 1 its valid flag) changes.
+    dev.call(id::REPROG_CONTROLS_V4, 3, &[c[0], c[1], 0, 0, 0, 0x02 | enabled as u8]).await.map(|_| ())
+}
+
 /// Events emitted by the feature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
@@ -193,6 +203,7 @@ pub fn decode_event(function: u8, p: &Params) -> Option<Event> {
         }
         1 => Some(Event::RawXy { dx: p.i16(0), dy: p.i16(2) }),
         2 => {
+            // Up to five (control id, event) entries; event bit 0 set means pressed.
             let mut events = Vec::new();
             for i in 0..5 {
                 let cid = p.u16(i * 3);

@@ -27,6 +27,16 @@ use crate::window::ActiveApp;
 /// SmartShift thresholds offered to users (above this the wheel is effectively always ratcheted).
 const SMARTSHIFT_MAX_THRESHOLD: u8 = 50;
 
+/// Controls that hid-logitech-hidpp diverts and maps to input events itself
+/// (HIDPP_QUIRK_HIDPP_REPROG_CONTROLS_BTNS).
+fn kernel_managed_controls(bus: hidpp::hidraw::Bus, product_id: u16) -> &'static [u16] {
+    match (bus, product_id) {
+        // Signature M650 over Bluetooth: back and forward.
+        (hidpp::hidraw::Bus::Bluetooth, 0xB02A) => &[0x0053, 0x0056],
+        _ => &[],
+    }
+}
+
 pub fn spawn(shared: Arc<Shared>, channel: Channel, index: u8, connection: ConnectionInfo) -> Mailbox {
     let (tx, rx) = mpsc::unbounded_channel();
     let actor = Actor::new(shared, channel, index, connection, tx.clone());
@@ -65,6 +75,8 @@ struct Actor {
     thumb: Option<ThumbwheelTracker>,
     shift_saved_dpi: Option<u16>,
     skip_first_motion: bool,
+    /// Controls with analytics key events turned on (live press highlighting).
+    analytics: Vec<u16>,
     battery_warned: bool,
     app: ActiveApp,
 }
@@ -94,6 +106,7 @@ impl Actor {
             thumb: None,
             shift_saved_dpi: None,
             skip_first_motion: false,
+            analytics: Vec::new(),
             battery_warned: false,
             app,
         }
@@ -126,7 +139,7 @@ impl Actor {
             }
             match rx.recv().await {
                 Some(DeviceMsg::Online(true)) => online = true,
-                Some(DeviceMsg::Online(false)) | Some(DeviceMsg::Report(_)) => {}
+                Some(DeviceMsg::Online(false)) | Some(DeviceMsg::Report(_)) | Some(DeviceMsg::Monitor(_)) => {}
                 Some(DeviceMsg::Command(_, reply)) => {
                     let _ = reply.send(Err("device is offline".into()));
                 }
@@ -152,6 +165,7 @@ impl Actor {
                         let _ = ack.send(());
                         break;
                     }
+                    Some(DeviceMsg::Monitor(on)) => self.update_analytics(on).await,
                     Some(DeviceMsg::Report(report)) => self.on_report(report).await,
                     Some(DeviceMsg::Online(online)) => self.on_online(online).await,
                     Some(DeviceMsg::Command(cmd, reply)) => {
@@ -213,6 +227,10 @@ impl Actor {
 
         self.skip_first_motion = dev.feature_version(fid::REPROG_CONTROLS_V4).is_some_and(|v| v >= 5);
         self.controls = if dev.has(fid::REPROG_CONTROLS_V4) { reprog_controls::controls(&dev).await? } else { Vec::new() };
+        // Controls the kernel driver diverts and maps itself; touching them would
+        // either break them or produce every press twice.
+        let kernel_managed = kernel_managed_controls(node.bus, node.product_id);
+        self.controls.retain(|c| !kernel_managed.contains(&c.cid));
         self.applied = Self::read_diversions(&dev, &self.controls).await;
         let controls = self
             .controls
@@ -368,11 +386,46 @@ impl Actor {
 
         self.apply_configuration(&config).await;
         self.check_battery_warning().await;
+        self.analytics.clear();
+        if self.shared.monitoring() {
+            self.update_analytics(true).await;
+        }
         if let Some(s) = self.snap.as_mut() {
             s.busy = false;
         }
         self.publish();
         Ok(())
+    }
+
+    /// Turns analytics key events on for every control that supports them and
+    /// is not diverted, so the app can highlight presses without changing them.
+    async fn update_analytics(&mut self, on: bool) {
+        let Some(dev) = self.dev.clone() else { return };
+        let wanted: Vec<u16> = if on {
+            self.controls
+                .iter()
+                .filter(|c| c.flags.contains(reprog_controls::ControlFlags::ANALYTICS_KEY_EVENTS))
+                .filter(|c| !self.applied.get(&c.cid).is_some_and(|d| d.divert))
+                .map(|c| c.cid)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        for cid in self.analytics.clone() {
+            if !wanted.contains(&cid) {
+                let _ = reprog_controls::set_analytics(&dev, cid, false).await;
+            }
+        }
+        let mut enabled = Vec::new();
+        for cid in wanted {
+            if self.analytics.contains(&cid) || reprog_controls::set_analytics(&dev, cid, true).await.is_ok() {
+                enabled.push(cid);
+            }
+        }
+        if !enabled.is_empty() || !self.analytics.is_empty() {
+            debug!("{}: analytics key events on {:04x?}", self.label(), enabled);
+        }
+        self.analytics = enabled;
     }
 
     /// Applies all hardware settings and bindings (on connect and reconnect).
@@ -648,6 +701,10 @@ impl Actor {
             }
         }
         self.apply_thumbwheel().await;
+        if self.shared.monitoring() {
+            // Diverted controls report presses themselves; keep analytics for the rest.
+            self.update_analytics(true).await;
+        }
         self.publish();
     }
 
@@ -702,6 +759,14 @@ impl Actor {
             fid::REPROG_CONTROLS_V4 => match reprog_controls::decode_event(function, &params) {
                 Some(reprog_controls::Event::DivertedButtons(cids)) => self.on_buttons(cids).await,
                 Some(reprog_controls::Event::RawXy { dx, dy }) => self.on_motion(dx, dy).await,
+                Some(reprog_controls::Event::Analytics(events)) => {
+                    debug!("{}: analytics {:02x?}", self.label(), params.as_slice());
+                    for (cid, pressed) in events {
+                        if self.analytics.contains(&cid) {
+                            self.shared.emit(DaemonEvent::Button { device: self.id(), control: controls::control_key(cid), pressed });
+                        }
+                    }
+                }
                 _ => {}
             },
             fid::THUMB_WHEEL => {
@@ -1255,6 +1320,9 @@ impl Actor {
     /// Restores native behaviour before the service exits.
     async fn restore(&mut self) {
         let Some(dev) = self.dev.clone() else { return };
+        for cid in std::mem::take(&mut self.analytics) {
+            let _ = reprog_controls::set_analytics(&dev, cid, false).await;
+        }
         for (cid, d) in self.applied.clone() {
             if d.divert || d.raw_xy {
                 let _ = reprog_controls::set_reporting(&dev, cid, reprog_controls::ReportingChange::divert(false, false)).await;

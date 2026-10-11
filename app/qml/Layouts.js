@@ -13,6 +13,7 @@ var layouts = {
             "thumbwheel": { x: 96, y: 280, side: "left" },
             "forward": { x: 78, y: 323, side: "left" },
             "back": { x: 80, y: 355, side: "left" },
+            "haptic-panel": { x: 92, y: 395, side: "left" },
             "gesture": { x: 66, y: 426, side: "left" }
         }
     },

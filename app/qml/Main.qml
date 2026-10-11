@@ -117,6 +117,12 @@ C.ApplicationWindow {
                     return "welcome"
                 if (!window.device.online && window.currentPage !== "info")
                     return "offline"
+                // Pages that only exist for some devices fall back to Buttons.
+                var caps = window.device.capabilities || {}
+                if ((window.currentPage === "haptics" && !caps.haptics)
+                        || (window.currentPage === "easyswitch" && (caps.hosts || 0) < 2)
+                        || (window.currentPage === "scroll" && !caps.dpi && !caps.smartshift && !caps.wheel && !caps.thumbwheel))
+                    return "buttons"
                 return window.currentPage
             }
 

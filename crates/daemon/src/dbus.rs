@@ -136,9 +136,42 @@ impl DaemonIface {
         Ok(())
     }
 
-    /// Enables raw motion signals (gesture preview in the app).
-    fn set_monitoring(&self, enabled: bool) {
-        self.shared.monitoring.store(enabled, Ordering::Relaxed);
+    /// Enables live input signals: presses of every control and raw motion
+    /// while a gesture button is held (used by the app while it is visible).
+    /// Monitoring stops by itself when the caller leaves the bus.
+    async fn set_monitoring(
+        &self,
+        enabled: bool,
+        #[zbus(header)] header: zbus::message::Header<'_>,
+        #[zbus(connection)] conn: &zbus::Connection,
+    ) {
+        set_monitoring(&self.shared, enabled);
+        if enabled {
+            if let Some(sender) = header.sender().map(|s| s.to_owned()) {
+                let (shared, conn) = (self.shared.clone(), conn.clone());
+                tokio::spawn(async move {
+                    use futures::StreamExt;
+                    let Ok(proxy) = zbus::fdo::DBusProxy::new(&conn).await else { return };
+                    let Ok(mut changes) = proxy.receive_name_owner_changed().await else { return };
+                    // The client may already be gone.
+                    if !proxy.name_has_owner(sender.clone().into()).await.unwrap_or(false) {
+                        set_monitoring(&shared, false);
+                        return;
+                    }
+                    while let Some(signal) = changes.next().await {
+                        if let Ok(args) = signal.args() {
+                            if args.name().as_str() == sender.as_str() && args.new_owner().is_none() {
+                                set_monitoring(&shared, false);
+                                return;
+                            }
+                        }
+                        if !shared.monitoring() {
+                            return;
+                        }
+                    }
+                });
+            }
+        }
     }
 
     /// Runs an action that does not need a device (to try it out).
@@ -171,6 +204,15 @@ impl DaemonIface {
     /// The focused application changed (JSON `ActiveApp`).
     #[zbus(signal)]
     async fn focus_changed(emitter: &SignalEmitter<'_>, app: &str) -> zbus::Result<()>;
+}
+
+fn set_monitoring(shared: &Shared, enabled: bool) {
+    let was = shared.monitoring.swap(enabled, Ordering::Relaxed);
+    if was != enabled {
+        for mailbox in shared.registry.mailboxes() {
+            let _ = mailbox.send(crate::devices::DeviceMsg::Monitor(enabled));
+        }
+    }
 }
 
 /// Receives focus changes from the KWin script.

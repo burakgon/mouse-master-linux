@@ -73,6 +73,8 @@ pub enum DeviceMsg {
     Shutdown,
     /// The service is exiting: restore native behaviour, then acknowledge.
     Stop(oneshot::Sender<()>),
+    /// A client started or stopped watching live input (press highlighting).
+    Monitor(bool),
 }
 
 pub type Mailbox = mpsc::UnboundedSender<DeviceMsg>;
