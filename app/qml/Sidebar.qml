@@ -11,7 +11,7 @@ Rectangle {
     signal selectDevice(string id)
     signal selectPage(string page)
 
-    readonly property var device: { Daemon.devices; return Daemon.device(currentDevice) }
+    property var device: ({})
     readonly property var caps: device && device.capabilities ? device.capabilities : ({})
 
     color: Theme.sidebar

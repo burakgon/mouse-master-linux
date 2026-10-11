@@ -51,20 +51,27 @@ C.ApplicationWindow {
     property bool devWatch: false
     onDevThemeChanged: if (devTheme !== "") Theme.mode = devTheme === "light" ? 1 : 2
 
+    // The list is passed in rather than looked up by id in C++ so that bindings
+    // depend on Daemon.devices and follow every device update.
+    function findDevice(list, id) {
+        for (var i = 0; i < list.length; ++i)
+            if (list[i].id === id)
+                return list[i]
+        return null
+    }
     property string currentDevice: {
-        Daemon.devices
-        if (devDevice !== "" && Daemon.device(devDevice).id !== undefined)
-            return devDevice
-        if (prefs.device !== "" && Daemon.device(prefs.device).id !== undefined)
-            return prefs.device
         var list = Daemon.devices
+        if (devDevice !== "" && findDevice(list, devDevice))
+            return devDevice
+        if (prefs.device !== "" && findDevice(list, prefs.device))
+            return prefs.device
         for (var i = 0; i < list.length; ++i)
             if (list[i].online)
                 return list[i].id
         return list.length ? list[0].id : ""
     }
     property string currentPage: "buttons"
-    readonly property var device: { Daemon.devices; return Daemon.device(currentDevice) }
+    readonly property var device: findDevice(Daemon.devices, currentDevice) || ({})
     readonly property bool hasDevice: !!device && device.id !== undefined
     property var recentApps: []
 
@@ -94,6 +101,7 @@ C.ApplicationWindow {
             Layout.fillHeight: true
             Layout.preferredWidth: implicitWidth
             currentDevice: window.currentDevice
+            device: window.device
             currentPage: window.currentPage
             onSelectDevice: function (id) {
                 prefs.device = id
