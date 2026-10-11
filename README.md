@@ -39,13 +39,16 @@ Mouse Master is that app.
   button, so modifier combos and drag-and-drop work.
 - **Mouse gestures on any capable button.** Hold the gesture button (or the middle, back,
   forward or mode shift button) and move: up, down, left, right, or just click. Presets for
-  desktop navigation, media, windows, the browser and zoom; repeat while moving for volume and
-  zoom; or **pan mode** — move the mouse to scroll in any direction.
+  desktop navigation, media, windows and the browser; repeat while moving for volume;
+  **pan mode** — move the mouse to scroll in any direction; or **zoom mode** — move it up and
+  down to zoom.
 - **Per-application profiles.** Customize buttons, gestures, the thumb wheel and even pointer
   speed for a single app. Switching is automatic and instant on **KDE Plasma** (KWin),
   **Hyprland** and **Sway**.
 - **Thumb wheel superpowers.** Horizontal scrolling at your speed, or zoom, volume, brightness,
   tabs, desktops, undo/redo — or any two actions of your choice. Tap the wheel for one more.
+- **Smooth pinch zoom.** The thumb wheel and zoom gestures zoom around the pointer like a
+  touchpad pinch, in browsers, document and image viewers and maps.
 - **Pointer & scroll.** DPI with presets, a cycle action and a hold-for-precision mode.
   SmartShift on/off and sensitivity, ratchet or free spin, torque (MX Master 4), smooth
   high-resolution scrolling and natural scrolling, all in the device itself.
@@ -217,7 +220,7 @@ See [docs/configuration.md](docs/configuration.md) for every option.
 The service diverts only the buttons you assign, so everything else keeps working natively,
 and it hands the buttons back when it stops. Gestures use the mouse's own raw motion reports
 while the button is held, so the pointer stays still. Actions are performed through uinput
-(keys, buttons, high-resolution scrolling) or the desktop's own API.
+(keys, buttons, high-resolution scrolling, touchpad pinches for zoom) or the desktop's own API.
 
 More in [docs/architecture.md](docs/architecture.md).
 
@@ -249,6 +252,10 @@ Master warns you while one of them is running and applies your settings again on
   turning the mouse off and on also restores its native behaviour.
 - **Scrolling suddenly too fast or slow after toggling smooth scrolling** — older kernels do
   not notice the change. Toggle it back or reconnect the mouse.
+- **A "Mouse Master virtual touchpad" in your input settings** — that is how smooth zoom
+  works: it pinches like two fingers on a touchpad. Leave it enabled; on KDE Plasma Mouse
+  Master turns it back on if the touchpad toggle switched it off. Apps that ignore touchpad
+  pinches still zoom with Ctrl + scroll: turn off *Smooth zoom* for the thumb wheel.
 - **Logs** — `journalctl --user -u mouse-master -f`, or run `mouse-masterd -v` in a terminal.
 - **Try it without hardware** — `mouse-masterd --demo` runs on simulated devices.
 

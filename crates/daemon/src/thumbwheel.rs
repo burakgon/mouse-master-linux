@@ -6,12 +6,19 @@ use crate::actions::Direction;
 use crate::config::ThumbwheelBinding;
 use crate::input::WHEEL_UNIT;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Zoom mode: how many times a full turn doubles the zoom at speed 1.
+const ZOOM_DOUBLINGS_PER_TURN: f32 = 3.0;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ThumbOutput {
     /// Horizontal high resolution scroll (positive scrolls right).
     Scroll(i32),
     /// One step of an action binding.
     Step(Direction),
+    /// Pinch zoom by a factor (above 1 zooms in).
+    Zoom(f32),
+    /// The wheel stopped: end the pinch.
+    ZoomEnd,
     Tap,
 }
 
@@ -58,7 +65,11 @@ impl ThumbwheelTracker {
             self.acc = 0.0;
             self.remainder = 0.0;
         }
+        let zoom = matches!(self.binding, ThumbwheelBinding::Zoom { .. });
         if ev.rotation == 0 {
+            if zoom && ev.status == RotationStatus::Stop {
+                out.push(ThumbOutput::ZoomEnd);
+            }
             return out;
         }
         // Positive means "to the right" after applying the device's default direction.
@@ -75,6 +86,10 @@ impl ThumbwheelTracker {
                 if whole != 0 {
                     out.push(ThumbOutput::Scroll(whole));
                 }
+            }
+            ThumbwheelBinding::Zoom { speed } => {
+                let turns = units / self.diverted_resolution;
+                out.push(ThumbOutput::Zoom(2f32.powf(turns * ZOOM_DOUBLINGS_PER_TURN * speed.clamp(0.1, 10.0))));
             }
             ThumbwheelBinding::Actions { step_degrees, .. } => {
                 let step = (step_degrees.clamp(3.0, 180.0) / 360.0 * self.diverted_resolution).max(1.0);
@@ -139,6 +154,24 @@ mod tests {
         assert_eq!(out, vec![ThumbOutput::Step(Direction::Right), ThumbOutput::Step(Direction::Right)]);
         let out = t.event(&ev(-5, RotationStatus::Active));
         assert_eq!(out, vec![ThumbOutput::Step(Direction::Right)]);
+    }
+
+    #[test]
+    fn zoom_doubles_every_third_of_a_turn() {
+        let mut t = ThumbwheelTracker::new(ThumbwheelBinding::Zoom { speed: 1.0 }, &info());
+        let mut zoom = 1.0;
+        // Rotation -10 with direction -1 is to the right: zoom in.
+        for _ in 0..4 {
+            for o in t.event(&ev(-10, RotationStatus::Active)) {
+                if let ThumbOutput::Zoom(f) = o {
+                    zoom *= f;
+                }
+            }
+        }
+        assert!((zoom - 2.0).abs() < 1e-3, "{zoom}");
+        let out = t.event(&ev(10, RotationStatus::Active));
+        assert!(matches!(out[..], [ThumbOutput::Zoom(f)] if f < 1.0), "{out:?}");
+        assert_eq!(t.event(&ev(0, RotationStatus::Stop)), vec![ThumbOutput::ZoomEnd]);
     }
 
     #[test]

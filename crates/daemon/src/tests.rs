@@ -207,6 +207,41 @@ async fn pan_gesture_scrolls() {
 }
 
 #[tokio::test]
+async fn zoom_pinches_with_the_thumbwheel_and_gestures() {
+    let h = Harness::new();
+    let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));
+    let dev = h.device("MX Master 3S").await;
+    let pinched = |input: &[Recorded]| -> f64 {
+        input.iter().map(|r| if let Recorded::Pinch(f) = r { *f } else { 1.0 }).product()
+    };
+
+    h.command(&dev.id, json!({ "command": "set-thumbwheel", "binding": { "type": "zoom" } })).await;
+    assert!(sim.snapshot(DIRECT).await.unwrap().thumb_diverted);
+    // A third of a turn to the right (40 units, default direction -1) doubles the zoom.
+    sim.send(SimCommand::Thumbwheel { slot: DIRECT, rotation: -40, status: 1, flags: 0 });
+    sim.send(SimCommand::Thumbwheel { slot: DIRECT, rotation: 0, status: 3, flags: 0 });
+    let input = h.input().await;
+    assert!((pinched(&input) - 2.0).abs() < 1e-3, "{input:?}");
+    assert_eq!(input.last(), Some(&Recorded::PinchEnd));
+
+    h.command(
+        &dev.id,
+        json!({ "command": "set-binding", "control": "gesture", "action": { "type": "gestures", "mode": "zoom" } }),
+    )
+    .await;
+    sim.press(DIRECT, &[GESTURE]);
+    sim.motion(DIRECT, 0, 0);
+    for _ in 0..6 {
+        sim.motion(DIRECT, 0, mm(5.0)); // 30 mm down halves the zoom
+    }
+    sim.release_all(DIRECT);
+    let input = h.input().await;
+    assert!((pinched(&input) - 0.5).abs() < 0.01, "{input:?}");
+    assert_eq!(input.last(), Some(&Recorded::PinchEnd));
+    assert!(!input.iter().any(|r| matches!(r, Recorded::Key(..))), "zoom must not click: {input:?}");
+}
+
+#[tokio::test]
 async fn remapped_button_holds_keys() {
     let h = Harness::new();
     let sim = h.sim(Topology::Direct(DeviceSpec::mx_master_3s()));

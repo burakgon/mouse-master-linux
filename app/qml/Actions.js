@@ -141,9 +141,11 @@ function describe(action, catalog, control, appLookup) {
     case "switch-host":
         return { label: "Computer " + (action.host + 1), icon: "monitor-smartphone", detail: "Easy-Switch" }
     case "gestures":
-        return action.mode === "pan"
-            ? { label: "Pan & scroll", icon: "move", detail: "Gestures" }
-            : { label: "Gestures", icon: "hand", detail: gestureSummary(action, catalog) }
+        if (action.mode === "pan")
+            return { label: "Pan & scroll", icon: "move", detail: "Gestures" }
+        if (action.mode === "zoom")
+            return { label: "Zoom", icon: "zoom-in", detail: "Gestures" }
+        return { label: "Gestures", icon: "hand", detail: gestureSummary(action, catalog) }
     case "macro":
         return { label: "Macro", icon: "list-checks", detail: (action.steps || []).length + " steps" }
     case "thumbwheel-mode":
@@ -175,14 +177,14 @@ var gesturePresets = [
     { id: "browser", label: "Browser", icon: "square-plus",
       set: { mode: "directional", up: b("new-tab"), down: b("close-tab"), left: b("back"), right: b("forward"), click: b("reopen-tab") } },
     { id: "zoom", label: "Zoom", icon: "zoom-in",
-      set: { mode: "directional", up: b("zoom-in"), down: b("zoom-out"), left: b("zoom-reset"), right: b("zoom-reset"), click: b("zoom-reset"), repeat_vertical: true, threshold_mm: 4 } },
+      set: { mode: "zoom", click: b("zoom-reset"), zoom_speed: 1.0 } },
     { id: "pan", label: "Pan & scroll", icon: "move",
       set: { mode: "pan", click: b("middle-click"), pan_speed: 1.0 } }
 ]
 
 function gestureFromPreset(preset, current) {
     var base = { type: "gestures", mode: "directional", threshold_mm: 7, trigger: "move",
-                 repeat_vertical: false, repeat_horizontal: false, pan_speed: 1.0, pan_invert: false,
+                 repeat_vertical: false, repeat_horizontal: false, pan_speed: 1.0, pan_invert: false, zoom_speed: 1.0,
                  up: b("overview"), down: b("show-desktop"), left: b("workspace-left"), right: b("workspace-right"), click: b("overview") }
     if (current) {
         base.threshold_mm = current.threshold_mm || base.threshold_mm
@@ -197,6 +199,7 @@ function gestureFromPreset(preset, current) {
 var thumbwheelModes = [
     { id: "default", label: "Horizontal scroll", icon: "move-horizontal", detail: "Native, smooth scrolling" },
     { id: "scroll", label: "Scroll, custom speed", icon: "gauge", detail: "Adjustable speed" },
+    // Smooth zoom; `left`/`right` are the stepped variant (Ctrl + scroll).
     { id: "zoom", label: "Zoom", icon: "zoom-in", left: "zoom-out", right: "zoom-in", step: 15 },
     { id: "volume", label: "Volume", icon: "volume-2", left: "volume-down", right: "volume-up", step: 12 },
     { id: "brightness", label: "Brightness", icon: "sun", left: "brightness-down", right: "brightness-up", step: 15 },
@@ -212,6 +215,8 @@ function thumbwheelModeOf(binding) {
         return "default"
     if (binding.type === "scroll")
         return "scroll"
+    if (binding.type === "zoom")
+        return "zoom"
     if (binding.type === "actions") {
         for (var i = 0; i < thumbwheelModes.length; ++i) {
             var m = thumbwheelModes[i]
@@ -232,7 +237,9 @@ function thumbwheelBindingFor(modeId, current) {
         if (m.id === "default")
             return null
         if (m.id === "scroll")
-            return { type: "scroll", speed: (current && current.speed) || 1.0 }
+            return { type: "scroll", speed: (current && current.type === "scroll" && current.speed) || 1.0 }
+        if (m.id === "zoom")
+            return { type: "zoom", speed: 1.0 }
         if (m.id === "custom")
             return { type: "actions", left: (current && current.left) || b("scroll-left"), right: (current && current.right) || b("scroll-right"), step_degrees: (current && current.step_degrees) || 20 }
         return { type: "actions", left: b(m.left), right: b(m.right), step_degrees: m.step }

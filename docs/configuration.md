@@ -65,6 +65,7 @@ The thumb wheel has its own entries:
 [devices."b034-5C8F7AF8".bindings]
 # Native horizontal scrolling when absent. Other choices:
 thumbwheel = { type = "scroll", speed = 1.5 }
+# thumbwheel = { type = "zoom", speed = 1.0 }   # smooth zoom, like a touchpad pinch
 # thumbwheel = { type = "actions", left = { type = "builtin", id = "volume-down" }, right = { type = "builtin", id = "volume-up" }, step_degrees = 12 }
 thumbwheel_tap = { type = "builtin", id = "play-pause" }   # touch sensitive wheels
 ```
@@ -108,7 +109,8 @@ bindings.thumbwheel = { type = "actions", left = { type = "keys", keys = ["KEY_L
 ```toml
 [devices."b034-5C8F7AF8".bindings.buttons.gesture]
 type = "gestures"
-mode = "directional"        # or "pan": move the mouse to scroll in any direction
+mode = "directional"        # or "pan": move the mouse to scroll in any direction,
+                            # or "zoom": move it up to zoom in and down to zoom out
 up = { type = "builtin", id = "overview" }
 down = { type = "builtin", id = "show-desktop" }
 left = { type = "builtin", id = "workspace-left" }
@@ -120,6 +122,7 @@ repeat_vertical = false     # keep firing up/down while moving (volume, zoom)
 repeat_horizontal = false
 pan_speed = 1.0             # pan mode
 pan_invert = false          # pan mode: drag the content instead of the view
+zoom_speed = 1.0            # zoom mode
 ```
 
 Gestures work on every control with raw motion reporting — on MX mice that is the gesture

@@ -96,6 +96,8 @@ pub enum GestureMode {
     Directional,
     /// Moving the mouse scrolls in any direction.
     Pan,
+    /// Moving the mouse up zooms in and down zooms out, like a touchpad pinch.
+    Zoom,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -138,6 +140,8 @@ pub struct GestureSet {
     pub pan_speed: f32,
     /// Pan mode: invert scrolling (drag the content instead of the view).
     pub pan_invert: bool,
+    /// Zoom mode: speed multiplier.
+    pub zoom_speed: f32,
 }
 
 impl Default for GestureSet {
@@ -156,6 +160,7 @@ impl Default for GestureSet {
             repeat_horizontal: false,
             pan_speed: 1.0,
             pan_invert: false,
+            zoom_speed: 1.0,
         }
     }
 }

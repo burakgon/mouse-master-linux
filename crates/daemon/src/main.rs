@@ -11,6 +11,7 @@ mod input;
 mod notify;
 mod session;
 mod thumbwheel;
+mod touchpad;
 mod window;
 
 #[cfg(test)]

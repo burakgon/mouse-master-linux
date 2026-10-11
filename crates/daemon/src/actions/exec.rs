@@ -2,11 +2,13 @@
 //! desktop operations, commands. Device operations (DPI, SmartShift, host
 //! switching) are handed back to the device that triggered the action.
 
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use evdev::KeyCode as K;
+use parking_lot::Mutex;
 use tokio::sync::watch;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use super::catalog::{self, DesktopOp, DeviceOp, Impl};
 use super::keys::parse_combo;
@@ -30,6 +32,8 @@ pub struct Executor {
     input: Option<SharedInput>,
     conn: Option<zbus::Connection>,
     desktop: watch::Receiver<Desktop>,
+    /// When KWin was last asked whether the touchpad is enabled.
+    touchpad_checked: Arc<Mutex<Option<Instant>>>,
 }
 
 impl Executor {
@@ -38,7 +42,7 @@ impl Executor {
         conn: Option<zbus::Connection>,
         desktop: watch::Receiver<Desktop>,
     ) -> Executor {
-        Executor { input, conn, desktop }
+        Executor { input, conn, desktop, touchpad_checked: Default::default() }
     }
 
     pub fn desktop(&self) -> Desktop {
@@ -53,6 +57,51 @@ impl Executor {
         match &self.input {
             Some(input) => f(input),
             None => warn!("virtual input is unavailable (no access to /dev/uinput)"),
+        }
+    }
+
+    /// Zooms like a touchpad pinch (see [`crate::input::InputSink::pinch`]).
+    pub async fn pinch(&self, factor: f64) {
+        self.keep_touchpad_enabled().await;
+        self.with_input(|i| i.pinch(factor));
+    }
+
+    pub fn end_pinch(&self) {
+        if let Some(input) = &self.input {
+            input.end_pinch();
+        }
+    }
+
+    /// KWin's "Toggle Touchpad" switches every touchpad off, the virtual one
+    /// included, which would quietly stop pinch zoom; switch it back on.
+    async fn keep_touchpad_enabled(&self) {
+        if self.desktop() != Desktop::Kde {
+            return;
+        }
+        let (Some(conn), Some(input)) = (&self.conn, &self.input) else { return };
+        let Some(name) = input.touchpad_sys_name() else { return };
+        {
+            let mut checked = self.touchpad_checked.lock();
+            if checked.is_some_and(|t| t.elapsed() < Duration::from_secs(2)) {
+                return;
+            }
+            *checked = Some(Instant::now());
+        }
+        let path = format!("/org/kde/KWin/InputDevice/{name}");
+        let (dest, props, iface) =
+            (Some("org.kde.KWin"), Some("org.freedesktop.DBus.Properties"), "org.kde.KWin.InputDevice");
+        let enabled = conn
+            .call_method(dest, path.as_str(), props, "Get", &(iface, "enabled"))
+            .await
+            .ok()
+            .and_then(|m| m.body().deserialize::<zbus::zvariant::OwnedValue>().ok())
+            .and_then(|v| bool::try_from(v).ok());
+        if enabled == Some(false) {
+            info!("turning the virtual touchpad back on (the touchpad toggle switched it off)");
+            let value = zbus::zvariant::Value::from(true);
+            if let Err(e) = conn.call_method(dest, path.as_str(), props, "Set", &(iface, "enabled", value)).await {
+                warn!("cannot turn the virtual touchpad back on: {e}");
+            }
         }
     }
 

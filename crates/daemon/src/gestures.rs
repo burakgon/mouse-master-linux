@@ -7,14 +7,21 @@ const MM_PER_INCH: f32 = 25.4;
 /// Pan mode: high resolution scroll units per millimetre at speed 1.0
 /// (one notch every 3 mm).
 const PAN_UNITS_PER_MM: f32 = 40.0;
-/// Movement below this is still a click in pan mode.
+/// Movement below this is still a click in pan and zoom mode.
 const PAN_CLICK_SLOP_MM: f32 = 2.0;
+/// Zoom mode: millimetres to move the mouse to double the zoom at speed 1.0.
+const ZOOM_MM_PER_DOUBLING: f32 = 30.0;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GestureEvent {
     Fire(Direction),
     Click,
-    Scroll { vertical: i32, horizontal: i32 },
+    Scroll {
+        vertical: i32,
+        horizontal: i32,
+    },
+    /// Pinch zoom by a factor (above 1 zooms in).
+    Zoom(f32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,6 +88,14 @@ impl GestureTracker {
         self.travel += (mx * mx + my * my).sqrt();
         match self.set.mode {
             GestureMode::Pan => self.pan(mx, my),
+            GestureMode::Zoom => {
+                if my == 0.0 {
+                    return Vec::new();
+                }
+                // Moving the mouse away from you (negative y) zooms in.
+                let speed = self.set.zoom_speed.clamp(0.1, 10.0);
+                vec![GestureEvent::Zoom(2f32.powf(-my / ZOOM_MM_PER_DOUBLING * speed))]
+            }
             GestureMode::Directional => {
                 self.acc_x += mx;
                 self.acc_y += my;
@@ -148,7 +163,7 @@ impl GestureTracker {
     pub fn release(&mut self) -> Vec<GestureEvent> {
         let threshold = self.threshold();
         match self.set.mode {
-            GestureMode::Pan => {
+            GestureMode::Pan | GestureMode::Zoom => {
                 if self.travel < PAN_CLICK_SLOP_MM {
                     vec![GestureEvent::Click]
                 } else {
@@ -241,6 +256,26 @@ mod tests {
         let set = GestureSet { threshold_mm: 5.0, ..Default::default() };
         let mut t = GestureTracker::new(set, true);
         assert!(t.motion(mm(50.0), 0, 1000).is_empty());
+        assert_eq!(t.release(), vec![GestureEvent::Click]);
+    }
+
+    #[test]
+    fn zoom_follows_vertical_movement() {
+        let mut t = tracker(|s| s.mode = GestureMode::Zoom);
+        let mut zoom = 1.0;
+        for _ in 0..30 {
+            for e in t.motion(mm(0.3), mm(-1.0), 1000) {
+                if let GestureEvent::Zoom(f) = e {
+                    zoom *= f;
+                }
+            }
+        }
+        // 30 mm up doubles the zoom; sideways movement does nothing.
+        assert!((zoom - 2.0).abs() < 0.02, "{zoom}");
+        assert!(t.motion(mm(5.0), 0, 1000).is_empty());
+        assert!(matches!(t.motion(0, mm(3.0), 1000)[..], [GestureEvent::Zoom(f)] if f < 1.0));
+        assert!(t.release().is_empty());
+        let mut t = tracker(|s| s.mode = GestureMode::Zoom);
         assert_eq!(t.release(), vec![GestureEvent::Click]);
     }
 

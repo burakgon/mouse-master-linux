@@ -18,7 +18,7 @@ use super::snapshot::*;
 use super::{Command, DaemonEvent, DeviceMsg, Mailbox, Reply, Shared};
 use crate::actions::catalog::DeviceOp;
 use crate::actions::exec::DeviceRequest;
-use crate::actions::{Action, MouseButton};
+use crate::actions::{Action, GestureMode, MouseButton};
 use crate::config::{AppProfile, Bindings, DeviceConfig, DeviceSettings, ThumbwheelBinding, WheelModeSetting};
 use crate::gestures::{GestureEvent, GestureTracker};
 use crate::thumbwheel::{ThumbOutput, ThumbwheelTracker};
@@ -763,12 +763,24 @@ impl Actor {
         self.bindings.buttons.get(&controls::control_key(cid)).cloned().unwrap_or_default()
     }
 
+    /// Whether a binding zooms by pinching.
+    fn uses_pinch(&self) -> bool {
+        let zoom_gesture = |a: &Action| matches!(a, Action::Gestures(set) if set.mode == GestureMode::Zoom);
+        matches!(self.bindings.thumbwheel, Some(ThumbwheelBinding::Zoom { .. }))
+            || self.bindings.buttons.values().any(zoom_gesture)
+    }
+
     async fn apply_bindings(&mut self) {
         if self.paused {
             return;
         }
         self.bindings_dirty = false;
         let Some(dev) = self.dev.clone() else { return };
+        if self.uses_pinch() {
+            if let Some(input) = self.shared.executor.input() {
+                input.prepare_pinch();
+            }
+        }
         let controls = self.controls.clone();
         for c in controls.iter().filter(|c| c.is_divertable()) {
             let action = self.binding_for(c.cid);
@@ -1030,6 +1042,9 @@ impl Actor {
                         if let Some(input) = self.shared.executor.input() {
                             input.reset_scroll();
                         }
+                        if set.mode == GestureMode::Zoom {
+                            self.shared.executor.end_pinch();
+                        }
                     } else {
                         self.gesture = Some((gcid, tracker));
                     }
@@ -1068,6 +1083,10 @@ impl Actor {
                 }
                 return;
             }
+            GestureEvent::Zoom(factor) => {
+                self.shared.executor.pinch(factor as f64).await;
+                return;
+            }
             GestureEvent::Click => ("click".to_string(), (*set.click).clone()),
             GestureEvent::Fire(dir) => (format!("{dir:?}").to_lowercase(), set.action(dir).clone()),
         };
@@ -1096,6 +1115,8 @@ impl Actor {
                         input.scroll(0, h);
                     }
                 }
+                ThumbOutput::Zoom(factor) => self.shared.executor.pinch(factor as f64).await,
+                ThumbOutput::ZoomEnd => self.shared.executor.end_pinch(),
                 ThumbOutput::Step(dir) => {
                     if let ThumbwheelBinding::Actions { left, right, .. } = &binding {
                         let action = if dir == crate::actions::Direction::Left { left } else { right };

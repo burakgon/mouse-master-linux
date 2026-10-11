@@ -14,7 +14,11 @@ ColumnLayout {
     signal changed(var gestures)
 
     readonly property var catalog: Daemon.catalog
-    readonly property bool pan: gestures && gestures.mode === "pan"
+    readonly property string mode: gestures && gestures.mode ? gestures.mode : "directional"
+    readonly property bool pan: mode === "pan"
+    readonly property bool zoom: mode === "zoom"
+    // Pan and zoom follow the movement instead of recognising directions.
+    readonly property bool continuous: pan || zoom
     spacing: 16
 
     function update(patch) {
@@ -26,15 +30,17 @@ ColumnLayout {
 
     Segmented {
         Layout.fillWidth: true
-        options: [{ value: "directional", label: "Directions", icon: "move" }, { value: "pan", label: "Pan & scroll", icon: "hand-grab" }]
-        value: root.pan ? "pan" : "directional"
+        options: [{ value: "directional", label: "Directions", icon: "move" },
+                  { value: "pan", label: "Pan & scroll", icon: "hand-grab" },
+                  { value: "zoom", label: "Zoom", icon: "zoom-in" }]
+        value: root.mode
         onActivated: function (v) { root.update({ mode: v }) }
     }
 
     // The gesture pad: four directions around a click target, with a live trail.
     Item {
         id: pad
-        visible: !root.pan
+        visible: !root.continuous
         Layout.fillWidth: true
         Layout.preferredHeight: Math.min(cell, 64) * 3 + gap * 2 + (cell - Math.min(cell, 64)) * 0
         readonly property real gap: 8
@@ -191,7 +197,7 @@ ColumnLayout {
     }
 
     Label {
-        visible: !root.pan
+        visible: !root.continuous
         Layout.fillWidth: true
         horizontalAlignment: Text.AlignHCenter
         text: "Hold the button and move the mouse to try it. Click a direction to change it."
@@ -220,30 +226,33 @@ ColumnLayout {
         }
     }
 
-    // Pan mode
+    // Pan and zoom modes
     ColumnLayout {
-        visible: root.pan
+        visible: root.continuous
         Layout.fillWidth: true
         spacing: 4
         Label {
             Layout.fillWidth: true
-            text: "Hold the button and move the mouse to scroll in any direction, like grabbing the page."
+            text: root.zoom
+                  ? "Hold the button and move the mouse up to zoom in or down to zoom out, smoothly around the pointer like pinching a touchpad."
+                  : "Hold the button and move the mouse to scroll in any direction, like grabbing the page."
             secondary: true
             wrapMode: Text.WordWrap
         }
         SettingRow {
-            title: "Scroll speed"
+            title: root.zoom ? "Zoom speed" : "Scroll speed"
             SliderField {
                 width: 180
                 from: 0.25
                 to: 4
                 stepSize: 0.25
-                value: root.gestures ? (root.gestures.pan_speed || 1) : 1
+                value: root.gestures ? ((root.zoom ? root.gestures.zoom_speed : root.gestures.pan_speed) || 1) : 1
                 format: function (v) { return v.toFixed(2) + "×" }
-                onMoved: root.update({ pan_speed: value })
+                onMoved: root.update(root.zoom ? { zoom_speed: value } : { pan_speed: value })
             }
         }
         SettingRow {
+            visible: root.pan
             title: "Drag the content"
             description: "Moving down scrolls up, like a touch screen."
             Toggle {
@@ -270,7 +279,7 @@ ColumnLayout {
 
     // Tuning
     ColumnLayout {
-        visible: !root.pan
+        visible: !root.continuous
         Layout.fillWidth: true
         spacing: 0
         SettingRow {

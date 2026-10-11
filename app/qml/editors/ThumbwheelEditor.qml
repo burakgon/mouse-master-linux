@@ -80,6 +80,29 @@ ColumnLayout {
             }
         }
         SettingRow {
+            visible: root.mode === "zoom"
+            title: "Smooth zoom"
+            description: "Zooms around the pointer like pinching a touchpad. Turn off for apps that only zoom with Ctrl + scroll."
+            Toggle {
+                checked: !!root.binding && root.binding.type === "zoom"
+                onToggled: root.bindingEdited(checked ? { type: "zoom", speed: 1.0 }
+                                                      : { type: "actions", left: Actions.b("zoom-out"), right: Actions.b("zoom-in"), step_degrees: 15 })
+            }
+        }
+        SettingRow {
+            visible: !!root.binding && root.binding.type === "zoom"
+            title: "Zoom speed"
+            SliderField {
+                width: 170
+                from: 0.25
+                to: 4
+                stepSize: 0.25
+                value: root.binding && root.binding.speed ? root.binding.speed : 1
+                format: function (v) { return v.toFixed(2) + "×" }
+                onMoved: root.bindingEdited({ type: "zoom", speed: value })
+            }
+        }
+        SettingRow {
             visible: root.binding && root.binding.type === "actions"
             title: "Step"
             description: "How far to turn the wheel for each step."

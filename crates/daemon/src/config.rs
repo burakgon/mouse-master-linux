@@ -105,6 +105,11 @@ pub enum ThumbwheelBinding {
         #[serde(default = "one")]
         speed: f32,
     },
+    /// Smooth zoom like a touchpad pinch: right zooms in, left zooms out.
+    Zoom {
+        #[serde(default = "one")]
+        speed: f32,
+    },
     /// Run one action per step to the left and another per step to the right.
     Actions {
         left: Action,

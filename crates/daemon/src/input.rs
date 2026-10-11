@@ -3,6 +3,7 @@
 //! Two devices are created so libinput classifies them cleanly: a keyboard
 //! for key combinations and a pointer for buttons, motion and (high
 //! resolution) scrolling. Both work on any Wayland compositor and on X11.
+//! A touchpad for pinch zoom is added the first time it is needed.
 
 use std::io;
 use std::sync::Arc;
@@ -13,8 +14,11 @@ use evdev::{AttributeSet, BusType, EventType, InputEvent, InputId, KeyCode, Rela
 use parking_lot::Mutex;
 use tracing::{debug, warn};
 
+use crate::touchpad::Touchpad;
+
 const KEYBOARD_NAME: &str = "Mouse Master virtual keyboard";
 const POINTER_NAME: &str = "Mouse Master virtual pointer";
+const TOUCHPAD_NAME: &str = "Mouse Master virtual touchpad";
 
 /// High resolution wheel units per notch.
 pub const WHEEL_UNIT: i32 = 120;
@@ -28,6 +32,18 @@ pub trait InputSink: Send + Sync {
     fn scroll(&self, vertical: i32, horizontal: i32);
     /// Resets partial scroll accumulation (at the end of a gesture).
     fn reset_scroll(&self) {}
+    /// Zooms like pinching on a touchpad, around the pointer: multiplies the
+    /// zoom by `factor` (above 1 zooms in). The first call puts the fingers down.
+    fn pinch(&self, factor: f64);
+    /// Lifts the fingers once the pinch so far is done.
+    fn end_pinch(&self);
+    /// Creates the touchpad ahead of the first pinch, so that the compositor
+    /// has picked it up by then.
+    fn prepare_pinch(&self) {}
+    /// The touchpad's kernel name (`event24`) once it exists.
+    fn touchpad_sys_name(&self) -> Option<String> {
+        None
+    }
     /// Releases everything still held (on shutdown or device disconnect).
     fn release_all(&self);
 
@@ -79,6 +95,8 @@ struct Pointer {
 pub struct VirtualInput {
     keyboard: Mutex<VirtualDevice>,
     pointer: Mutex<Pointer>,
+    touchpad: Mutex<Option<Touchpad>>,
+    touchpad_warned: std::sync::atomic::AtomicBool,
     /// Keys currently held down by us, so they can be released on shutdown.
     held: Mutex<Vec<KeyCode>>,
 }
@@ -162,6 +180,24 @@ impl InputSink for LazyInput {
             v.reset_scroll();
         }
     }
+    fn pinch(&self, factor: f64) {
+        if let Some(v) = self.get() {
+            v.pinch(factor);
+        }
+    }
+    fn end_pinch(&self) {
+        if let Some(v) = self.inner.lock().as_ref() {
+            v.end_pinch();
+        }
+    }
+    fn prepare_pinch(&self) {
+        if let Some(v) = self.get() {
+            v.prepare_pinch();
+        }
+    }
+    fn touchpad_sys_name(&self) -> Option<String> {
+        self.inner.lock().as_ref()?.touchpad_sys_name()
+    }
     fn release_all(&self) {
         if let Some(v) = self.inner.lock().as_ref() {
             v.release_all();
@@ -233,8 +269,29 @@ impl VirtualInput {
         Ok(VirtualInput {
             keyboard: Mutex::new(keyboard),
             pointer: Mutex::new(Pointer { dev: pointer, v_acc: 0, h_acc: 0 }),
+            touchpad: Mutex::new(None),
+            touchpad_warned: std::sync::atomic::AtomicBool::new(false),
             held: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Runs `f` with the touchpad, creating it if needed.
+    fn with_touchpad(&self, f: impl FnOnce(&Touchpad)) {
+        let mut pad = self.touchpad.lock();
+        if pad.is_none() {
+            match Touchpad::new(TOUCHPAD_NAME) {
+                Ok(t) => *pad = Some(t),
+                Err(e) => {
+                    if !self.touchpad_warned.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                        warn!("cannot create the virtual touchpad for pinch zoom: {e}");
+                    }
+                    return;
+                }
+            }
+        }
+        if let Some(t) = pad.as_ref() {
+            f(t);
+        }
     }
 
     fn emit_keyboard(&self, events: &[InputEvent]) {
@@ -307,8 +364,27 @@ impl InputSink for VirtualInput {
         p.h_acc = 0;
     }
 
+    fn pinch(&self, factor: f64) {
+        self.with_touchpad(|t| t.zoom(factor));
+    }
+
+    fn end_pinch(&self) {
+        if let Some(t) = self.touchpad.lock().as_ref() {
+            t.end();
+        }
+    }
+
+    fn prepare_pinch(&self) {
+        self.with_touchpad(|_| {});
+    }
+
+    fn touchpad_sys_name(&self) -> Option<String> {
+        self.touchpad.lock().as_ref()?.sys_name().map(str::to_string)
+    }
+
     /// Releases everything still held (on shutdown or device disconnect).
     fn release_all(&self) {
+        self.end_pinch();
         let held: Vec<KeyCode> = std::mem::take(&mut *self.held.lock());
         for k in held.iter().rev() {
             let ev = [key_event(*k, 0)];
@@ -331,10 +407,12 @@ pub struct RecordingInput {
 }
 
 #[cfg(test)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Recorded {
     Key(KeyCode, bool),
     Scroll(i32, i32),
+    Pinch(f64),
+    PinchEnd,
 }
 
 #[cfg(test)]
@@ -351,6 +429,12 @@ impl InputSink for RecordingInput {
     }
     fn scroll(&self, vertical: i32, horizontal: i32) {
         self.events.lock().push(Recorded::Scroll(vertical, horizontal));
+    }
+    fn pinch(&self, factor: f64) {
+        self.events.lock().push(Recorded::Pinch(factor));
+    }
+    fn end_pinch(&self) {
+        self.events.lock().push(Recorded::PinchEnd);
     }
     fn release_all(&self) {}
 }

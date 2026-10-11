@@ -22,3 +22,4 @@ All notable changes to this project are documented here. The format follows
 - Bluetooth, Bolt, Unifying and Lightspeed support.
 - A HID++ simulator, an end-to-end test suite and `mouse-masterd --demo`.
 - `mouse-masterctl doctor`, and a warning in the app while Solaar or logiops is running.
+- Smooth zoom like a touchpad pinch, from the thumb wheel or a zoom gesture mode.

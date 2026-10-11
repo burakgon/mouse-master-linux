@@ -71,6 +71,10 @@ corrects it.
 
 - keys, mouse buttons and scrolling through two uinput devices (`input`), a keyboard and a
   pointer with high resolution wheel axes, so libinput classifies them correctly;
+- smooth zoom through a third one, a touchpad created on first use (`touchpad`): two fingers
+  move apart or together, libinput reports a pinch and the compositor hands it to the window
+  under the pointer. A thread of its own paces the frames, since libinput discards touches
+  that jump too far between frames;
 - desktop actions through the desktop's own interface: KWin global shortcuts over D-Bus on
   Plasma, dispatchers over the IPC socket on Hyprland, `swaymsg` on Sway, standard shortcuts
   on GNOME;
