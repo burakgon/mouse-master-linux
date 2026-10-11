@@ -1,0 +1,22 @@
+[package]
+name = "hidpp"
+description = "Asynchronous implementation of Logitech's HID++ 1.0 / 2.0 protocol over Linux hidraw"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+thiserror.workspace = true
+bitflags.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
+udev.workspace = true
+libc.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

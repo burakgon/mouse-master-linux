@@ -1,0 +1,12 @@
+/target/
+/build/
+/app/build/
+*.user
+*.swp
+.idea/
+.vscode/
+.cache/
+compile_commands.json
+/packaging/arch/src/
+/packaging/arch/pkg/
+/packaging/arch/*.tar.*
