@@ -59,8 +59,8 @@ Mouse Master is that app.
   MX Master 4's haptic feedback.
 - **Bluetooth, Bolt, Unifying and Lightspeed.** Settings follow the device, whichever way
   it is connected, and are applied again whenever it wakes up or reconnects.
-- **Light and polite.** A Rust service that uses about **9 MB of memory** and no CPU while
-  idle, a Qt 6 app you only open to change things, a D-Bus API and a CLI. It never changes a
+- **Light and polite.** A Rust service that uses less than **10 MB of memory** and no CPU
+  while idle, a Qt 6 app you only open to change things, a D-Bus API and a CLI. It never changes a
   setting you did not touch, and puts every button back to normal when it stops.
 
 <table>
@@ -84,10 +84,11 @@ Mouse Master is that app.
 
 ## Install
 
-### Arch Linux and derivatives (AUR)
+### Arch Linux and derivatives
 
 ```sh
-yay -S mouse-master-git          # or paru, or makepkg -si in packaging/arch
+git clone https://github.com/burakgon/mouse-master
+cd mouse-master/packaging/arch && makepkg -si
 systemctl --user enable --now mouse-master.service
 ```
 
@@ -147,7 +148,7 @@ works with far more mice than it has artwork for.
 | Device | Status |
 | --- | --- |
 | MX Master 3S | ✅ tested (Bluetooth) |
-| MX Master 4 | ✅ simulated; haptics and SmartShift torque supported |
+| MX Master 4 | ✅ tested (Bluetooth), including haptics and SmartShift torque |
 | MX Master 2S, MX Master 3 / 3 for Mac / 3S for Mac | expected to work — same features as the 3S |
 | MX Anywhere 2S / 3 / 3S, MX Vertical, MX Ergo, Lift, M720, M590, Signature M650 | expected to work |
 | G series over Lightspeed or USB | DPI, report rate and onboard memory; buttons where the mouse allows remapping |
@@ -160,7 +161,7 @@ how it went — it helps others and lets us add artwork for your mouse.
 
 ```console
 $ mouse-masterctl list
-● MX Master 3S             b034-5C8F7AF8    battery 65%
+● MX Master 3S             b034-1A2B3C4D    battery 65%
 
 $ mouse-masterctl set dpi=1600 smartshift=true smartshift_threshold=12
 $ mouse-masterctl bind back copy                   # a built-in action
@@ -176,16 +177,16 @@ Settings live in `~/.config/mouse-master/config.toml`. The app writes it for you
 meant to be readable and editable (stop the service while you edit it):
 
 ```toml
-[devices."b034-5C8F7AF8"]
+[devices."b034-1A2B3C4D"]
 name = "MX Master 3S"
 
-[devices."b034-5C8F7AF8".settings]
+[devices."b034-1A2B3C4D".settings]
 dpi = 1600
 dpi_presets = [800, 1600, 3200]
 smartshift = true
 smartshift_threshold = 12
 
-[devices."b034-5C8F7AF8".bindings.buttons.gesture]
+[devices."b034-1A2B3C4D".bindings.buttons.gesture]
 type = "gestures"
 up = { type = "builtin", id = "overview" }
 down = { type = "builtin", id = "show-desktop" }
@@ -193,11 +194,11 @@ left = { type = "builtin", id = "workspace-left" }
 right = { type = "builtin", id = "workspace-right" }
 click = { type = "builtin", id = "overview" }
 
-[devices."b034-5C8F7AF8".bindings.buttons.back]
+[devices."b034-1A2B3C4D".bindings.buttons.back]
 type = "keys"
 keys = ["KEY_LEFTCTRL", "KEY_Z"]
 
-[[devices."b034-5C8F7AF8".profiles]]
+[[devices."b034-1A2B3C4D".profiles]]
 id = "p1"
 name = "Firefox"
 apps = ["firefox", "org.mozilla.firefox"]

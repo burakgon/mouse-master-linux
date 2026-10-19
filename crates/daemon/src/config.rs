@@ -317,7 +317,7 @@ mod tests {
             apps: vec!["firefox".into()],
             ..Default::default()
         });
-        cfg.devices.insert("b034-5C8F7AF8".into(), dev);
+        cfg.devices.insert("b034-1A2B3C4D".into(), dev);
         let text = toml::to_string_pretty(&cfg).unwrap();
         let back: Config = toml::from_str(&text).unwrap();
         assert_eq!(cfg, back);

@@ -16,7 +16,7 @@
       <li>Mouse gestures and drag-to-scroll (pan) on the gesture button or any other button</li>
       <li>Per-application profiles that switch automatically (KDE Plasma, Hyprland, Sway)</li>
       <li>Pointer speed (DPI), SmartShift sensitivity, scroll direction and resolution</li>
-      <li>Thumb wheel actions: zoom, volume, tabs, desktops and more</li>
+      <li>Thumb wheel actions: smooth pinch zoom, volume, tabs, desktops and more</li>
       <li>Easy-Switch host names, battery status and low battery notifications</li>
       <li>Works with Bluetooth, Bolt, Unifying and Lightspeed connections</li>
     </ul>
@@ -26,6 +26,28 @@
   <developer id="io.github.burakgon">
     <name>Burak Gon</name>
   </developer>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Mouse gestures on the gesture button</caption>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/gestures.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Smooth pinch zoom on the thumb wheel</caption>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/thumbwheel.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Choosing what a button does</caption>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/action-picker.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Pointer speed and scrolling</caption>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/point-and-scroll.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The buttons page in light mode</caption>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/buttons-light.png</image>
+    </screenshot>
+  </screenshots>
   <url type="homepage">https://github.com/burakgon/mouse-master</url>
   <url type="bugtracker">https://github.com/burakgon/mouse-master/issues</url>
   <content_rating type="oars-1.1"/>
@@ -47,7 +69,7 @@
     <keyword>dpi</keyword>
   </keywords>
   <releases>
-    <release version="0.1.0" date="2026-10-11">
+    <release version="0.1.0" date="2026-10-20">
       <description>
         <p>First release.</p>
       </description>
