@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(mouse-master VERSION 0.1.0 LANGUAGES CXX
         DESCRIPTION "Configure Logitech mice on Linux: buttons, gestures, scrolling and more"
-        HOMEPAGE_URL "https://github.com/burakgon/mouse-master")
+        HOMEPAGE_URL "https://github.com/burakgon/mouse-master-linux")
 
 include(GNUInstallDirs)
 

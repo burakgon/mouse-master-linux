@@ -6,8 +6,8 @@ members = ["crates/hidpp", "crates/daemon", "crates/ctl"]
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/burakgon/mouse-master"
-homepage = "https://github.com/burakgon/mouse-master"
+repository = "https://github.com/burakgon/mouse-master-linux"
+homepage = "https://github.com/burakgon/mouse-master-linux"
 authors = ["Burak Goncu"]
 rust-version = "1.85"
 

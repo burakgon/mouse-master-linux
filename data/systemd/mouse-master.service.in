@@ -1,6 +1,6 @@
 [Unit]
 Description=Mouse Master - Logitech device configuration service
-Documentation=https://github.com/burakgon/mouse-master
+Documentation=https://github.com/burakgon/mouse-master-linux
 # Device access is granted by udev (uaccess) to the active session's user.
 After=dbus.socket
 

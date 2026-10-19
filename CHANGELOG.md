@@ -28,5 +28,5 @@ All notable changes to this project are documented here. The format follows
 - The app offers a restart when it was updated while open, so an old window cannot
   save settings it does not know.
 
-[Unreleased]: https://github.com/burakgon/mouse-master/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/burakgon/mouse-master/releases/tag/v0.1.0
+[Unreleased]: https://github.com/burakgon/mouse-master-linux/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/burakgon/mouse-master-linux/releases/tag/v0.1.0

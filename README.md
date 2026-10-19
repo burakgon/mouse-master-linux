@@ -9,7 +9,7 @@
 Remap every button, hold and move for gestures, tune SmartShift and the thumb wheel,<br>
 and give every application its own setup. Native on KDE Plasma, Hyprland, Sway and GNOME.
 
-[![CI](https://github.com/burakgon/mouse-master/actions/workflows/ci.yml/badge.svg)](https://github.com/burakgon/mouse-master/actions/workflows/ci.yml)
+[![CI](https://github.com/burakgon/mouse-master-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/burakgon/mouse-master-linux/actions/workflows/ci.yml)
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 ![Wayland](https://img.shields.io/badge/Wayland-native-5b7cff)
 ![Rust](https://img.shields.io/badge/service-Rust-orange)
@@ -87,8 +87,8 @@ Mouse Master is that app.
 ### Arch Linux and derivatives
 
 ```sh
-git clone https://github.com/burakgon/mouse-master
-cd mouse-master/packaging/arch && makepkg -si
+git clone https://github.com/burakgon/mouse-master-linux
+cd mouse-master-linux/packaging/arch && makepkg -si
 systemctl --user enable --now mouse-master.service
 ```
 
@@ -106,8 +106,8 @@ You need Rust (1.85+), CMake, a C++ compiler and Qt 6.5 or newer:
 Then:
 
 ```sh
-git clone https://github.com/burakgon/mouse-master
-cd mouse-master
+git clone https://github.com/burakgon/mouse-master-linux
+cd mouse-master-linux
 ./scripts/install.sh            # installs to /usr/local, sets up device access and the service
 ```
 
@@ -154,7 +154,7 @@ works with far more mice than it has artwork for.
 | G series over Lightspeed or USB | DPI, report rate and onboard memory; buttons where the mouse allows remapping |
 | Bolt, Unifying, Lightspeed and Nano receivers | ✅ (receiver handling is covered by the test suite) |
 
-Got one of these? Run `mouse-masterctl info` and [let us know](https://github.com/burakgon/mouse-master/issues/new?template=device-report.yml)
+Got one of these? Run `mouse-masterctl info` and [let us know](https://github.com/burakgon/mouse-master-linux/issues/new?template=device-report.yml)
 how it went — it helps others and lets us add artwork for your mouse.
 
 ## Command line

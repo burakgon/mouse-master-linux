@@ -6,7 +6,7 @@ and that takes many devices, desktops and hands.
 ## Ways to help
 
 - **Report your device.** Run `mouse-masterctl info --json` and open a
-  [device report](https://github.com/burakgon/mouse-master/issues/new?template=device-report.yml).
+  [device report](https://github.com/burakgon/mouse-master-linux/issues/new?template=device-report.yml).
   Tell us what works and what does not. This is the single most useful contribution.
 - **Draw your mouse.** Artwork lives in `app/assets/devices` (SVG, 400×560, top view, no
   filters) and control positions in `app/qml/Layouts.js`. Look at `mx-master.svg` for the style.

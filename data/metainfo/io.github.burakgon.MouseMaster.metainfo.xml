@@ -29,27 +29,27 @@
   <screenshots>
     <screenshot type="default">
       <caption>Mouse gestures on the gesture button</caption>
-      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/gestures.png</image>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master-linux/main/docs/screenshots/gestures.png</image>
     </screenshot>
     <screenshot>
       <caption>Smooth pinch zoom on the thumb wheel</caption>
-      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/thumbwheel.png</image>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master-linux/main/docs/screenshots/thumbwheel.png</image>
     </screenshot>
     <screenshot>
       <caption>Choosing what a button does</caption>
-      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/action-picker.png</image>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master-linux/main/docs/screenshots/action-picker.png</image>
     </screenshot>
     <screenshot>
       <caption>Pointer speed and scrolling</caption>
-      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/point-and-scroll.png</image>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master-linux/main/docs/screenshots/point-and-scroll.png</image>
     </screenshot>
     <screenshot>
       <caption>The buttons page in light mode</caption>
-      <image>https://raw.githubusercontent.com/burakgon/mouse-master/main/docs/screenshots/buttons-light.png</image>
+      <image>https://raw.githubusercontent.com/burakgon/mouse-master-linux/main/docs/screenshots/buttons-light.png</image>
     </screenshot>
   </screenshots>
-  <url type="homepage">https://github.com/burakgon/mouse-master</url>
-  <url type="bugtracker">https://github.com/burakgon/mouse-master/issues</url>
+  <url type="homepage">https://github.com/burakgon/mouse-master-linux</url>
+  <url type="bugtracker">https://github.com/burakgon/mouse-master-linux/issues</url>
   <content_rating type="oars-1.1"/>
   <supports>
     <control>pointing</control>

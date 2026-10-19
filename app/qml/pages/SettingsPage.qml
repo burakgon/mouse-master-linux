@@ -224,14 +224,14 @@ ScrollPage {
                     text: "Website"
                     iconName: "external-link"
                     compact: true
-                    onClicked: System.openUrl("https://github.com/burakgon/mouse-master")
+                    onClicked: System.openUrl("https://github.com/burakgon/mouse-master-linux")
                 }
                 AppButton {
                     text: "Report a problem"
                     iconName: "circle-alert"
                     kind: "ghost"
                     compact: true
-                    onClicked: System.openUrl("https://github.com/burakgon/mouse-master/issues")
+                    onClicked: System.openUrl("https://github.com/burakgon/mouse-master-linux/issues")
                 }
             }
         }

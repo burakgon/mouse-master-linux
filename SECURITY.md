@@ -4,7 +4,7 @@ Mouse Master runs as your user and can send keyboard and mouse input through uin
 take security reports seriously.
 
 Please report vulnerabilities privately through GitHub's
-[private vulnerability reporting](https://github.com/burakgon/mouse-master/security/advisories/new)
+[private vulnerability reporting](https://github.com/burakgon/mouse-master-linux/security/advisories/new)
 rather than in a public issue. We aim to acknowledge reports within a few days.
 
 Things we consider in scope:
