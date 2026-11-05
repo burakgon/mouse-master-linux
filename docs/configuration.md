@@ -7,6 +7,13 @@ Mouse Master keeps its settings in `~/.config/mouse-master/config.toml`. The app
 Hardware settings are optional: a setting that is not present is never touched, so the
 device keeps whatever it had.
 
+## Application startup
+
+The Settings page can create a per-user desktop autostart entry. Both options are off by
+default. Enable **Start Mouse Master at login** to launch the app with your desktop session;
+then enable **Start minimized** to keep its window hidden in the system tray. The minimized
+option is available only when a system tray is detected and app autostart is enabled.
+
 ## General
 
 ```toml

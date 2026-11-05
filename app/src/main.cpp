@@ -3,6 +3,8 @@
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QApplication>
+#include <QCommandLineOption>
+#include <QCommandLineParser>
 #include <QIcon>
 #include <QMouseEvent>
 #include <QQmlApplicationEngine>
@@ -53,7 +55,14 @@ int main(int argc, char *argv[])
     QGuiApplication::setOrganizationName(QStringLiteral("mouse-master"));
     QGuiApplication::setDesktopFileName(AppId);
     QGuiApplication::setWindowIcon(QIcon::fromTheme(AppId, QIcon(QStringLiteral(":/icons/app/io.github.burakgon.MouseMaster.svg"))));
-    AppController appController;
+    QCommandLineParser parser;
+    parser.addHelpOption();
+    parser.addVersionOption();
+    const QCommandLineOption startMinimizedOption(QStringLiteral("start-minimized"), QStringLiteral("Start with the window hidden in the system tray."));
+    parser.addOption(startMinimizedOption);
+    parser.process(app);
+
+    AppController appController(parser.isSet(startMinimizedOption));
 
     auto bus = QDBusConnection::sessionBus();
     SingleInstance instance;
@@ -79,6 +88,8 @@ int main(int argc, char *argv[])
     if (!engine.rootObjects().isEmpty()) {
         if (auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
             appController.setWindow(window);
+            const bool capture = qEnvironmentVariableIsSet("MM_SCREENSHOT") || qEnvironmentVariableIsSet("MM_RECORD");
+            window->setVisible(capture || !appController.shouldStartMinimized());
         }
     }
 
