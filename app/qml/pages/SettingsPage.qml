@@ -44,6 +44,36 @@ ScrollPage {
 
     Card {
         Layout.fillWidth: true
+        ColumnLayout {
+            width: parent.width
+            spacing: 4
+            SectionTitle { text: "Application" }
+            Item { Layout.preferredHeight: 6 }
+            SettingRow {
+                iconName: "monitor"
+                title: "Start Mouse Master at login"
+                description: "Open the app automatically when your desktop session starts."
+                Toggle {
+                    checked: AppController.startOnLogin
+                    onToggled: if (!AppController.setStartOnLogin(checked)) Notify.show("Could not update the login startup entry", true)
+                }
+            }
+            SettingRow {
+                iconName: "minimize-2"
+                title: "Start minimized"
+                description: "At login, keep the window hidden in the system tray."
+                divider: false
+                Toggle {
+                    enabled: AppController.trayAvailable && AppController.startOnLogin
+                    checked: AppController.startMinimized
+                    onToggled: if (!AppController.setStartMinimized(checked)) Notify.show("Could not save the startup preference", true)
+                }
+            }
+        }
+    }
+
+    Card {
+        Layout.fillWidth: true
         enabled: Daemon.available
         opacity: enabled ? 1 : 0.5
         ColumnLayout {

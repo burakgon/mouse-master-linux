@@ -9,6 +9,7 @@ C.ScrollView {
     property int maxContentWidth: 820
     property int margins: 32
     contentWidth: availableWidth
+    contentHeight: column.implicitHeight + root.margins * 2
     clip: true
 
     C.ScrollBar.vertical.policy: C.ScrollBar.AsNeeded
@@ -19,11 +20,5 @@ C.ScrollView {
         x: (root.availableWidth - width) / 2
         y: root.margins
         spacing: 20
-    }
-    Item {
-        // bottom padding
-        y: column.y + column.height
-        width: 1
-        height: root.margins
     }
 }

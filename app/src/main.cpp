@@ -2,10 +2,13 @@
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
-#include <QGuiApplication>
+#include <QApplication>
+#include <QCommandLineOption>
+#include <QCommandLineParser>
 #include <QIcon>
 #include <QMouseEvent>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QQuickStyle>
 #include <QQuickWindow>
 #include <QTimer>
@@ -13,6 +16,7 @@
 #include <memory>
 
 #include "iconprovider.h"
+#include "appcontroller.h"
 
 namespace {
 const QString AppId = QStringLiteral("io.github.burakgon.MouseMaster");
@@ -44,13 +48,21 @@ public Q_SLOTS:
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("mouse-master"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Mouse Master"));
     QGuiApplication::setApplicationVersion(QStringLiteral(MOUSE_MASTER_VERSION));
     QGuiApplication::setOrganizationName(QStringLiteral("mouse-master"));
     QGuiApplication::setDesktopFileName(AppId);
     QGuiApplication::setWindowIcon(QIcon::fromTheme(AppId, QIcon(QStringLiteral(":/icons/app/io.github.burakgon.MouseMaster.svg"))));
+    QCommandLineParser parser;
+    parser.addHelpOption();
+    parser.addVersionOption();
+    const QCommandLineOption startMinimizedOption(QStringLiteral("start-minimized"), QStringLiteral("Start with the window hidden in the system tray."));
+    parser.addOption(startMinimizedOption);
+    parser.process(app);
+
+    AppController appController(parser.isSet(startMinimizedOption));
 
     auto bus = QDBusConnection::sessionBus();
     SingleInstance instance;
@@ -67,11 +79,19 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("AppController"), &appController);
     instance.engine = &engine;
     engine.addImageProvider(QStringLiteral("lucide"), new LucideIconProvider);
     engine.addImageProvider(QStringLiteral("theme"), new ThemeIconProvider);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("MouseMaster", "Main");
+    if (!engine.rootObjects().isEmpty()) {
+        if (auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
+            appController.setWindow(window);
+            const bool capture = qEnvironmentVariableIsSet("MM_SCREENSHOT") || qEnvironmentVariableIsSet("MM_RECORD");
+            window->setVisible(capture || !appController.shouldStartMinimized());
+        }
+    }
 
     // Development aid: MM_SCREENSHOT=/path.png renders the window to a file and quits
     // (MM_SCREENSHOT_DELAY in milliseconds, default 1500). Used for docs and design reviews.

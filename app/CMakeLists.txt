@@ -1,8 +1,9 @@
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Svg)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Qml Quick QuickControls2 DBus Svg)
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(mouse-master
     src/main.cpp
+    src/appcontroller.cpp src/appcontroller.h
     src/daemonclient.cpp src/daemonclient.h
     src/system.cpp src/system.h
     src/apps.cpp src/apps.h
@@ -43,6 +44,6 @@ qt_add_resources(mouse-master "rules"
 )
 
 target_link_libraries(mouse-master PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Svg)
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::DBus Qt6::Svg)
 
 install(TARGETS mouse-master RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

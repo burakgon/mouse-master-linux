@@ -10,8 +10,14 @@ C.ApplicationWindow {
     height: 820
     minimumWidth: 940
     minimumHeight: 640
-    visible: true
+    visible: false
     title: "Mouse Master"
+    onClosing: function (close) {
+        if (AppController.hideOnClose()) {
+            close.accepted = false
+            window.hide()
+        }
+    }
     color: Theme.window
 
     Settings {
